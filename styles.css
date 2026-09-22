@@ -10,7 +10,7 @@
 .hero h1{font-size:clamp(44px,5.2vw,70px)}
 .hero-title-compact{max-width:590px!important}
 .hero-companies{font-size:15px;line-height:1.6;max-width:460px}
-.microscope-card{width:min(100%,540px);aspect-ratio:1.42;margin:0;border:1px solid #4e5484;border-radius:10px;background:#080d16;box-shadow:0 0 70px rgba(57,88,172,.16),inset 0 0 50px rgba(80,83,159,.1);position:relative;overflow:hidden;transform:rotate(2deg)}
+.microscope-card{width:min(100%,460px);aspect-ratio:1.42;margin:0;border:1px solid #4e5484;border-radius:10px;background:#080d16;box-shadow:0 0 70px rgba(57,88,172,.16),inset 0 0 50px rgba(80,83,159,.1);position:relative;overflow:hidden;transform:rotate(2deg)}
 .microscope-card:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,8,14,.72),transparent 48%),linear-gradient(0deg,rgba(5,8,14,.55),transparent 42%);pointer-events:none}
 .microscope-card img{display:block;width:100%;height:100%;object-fit:cover}
 .microscope-card figcaption{position:absolute;left:20px;right:20px;bottom:18px;z-index:1;display:flex;align-items:end;justify-content:space-between;border-top:1px solid rgba(115,169,255,.24);padding-top:14px;font:10px var(--mono);color:#8da3c7;letter-spacing:.08em}
