@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Página no encontrada | AJJITEC</title>
+    <link rel="stylesheet" href="/ajjitec/styles.css" />
+  </head>
+  <body>
+    <main class="product-not-found shell"><p class="eyebrow">ERROR / 404</p><h1>Esta ruta cambió.</h1><p>Te llevaremos al contenido equivalente del nuevo sitio.</p><a class="button button-primary" href="/ajjitec/index.html">Volver al inicio</a></main>
+    <script>
+      const base = location.pathname.startsWith('/ajjitec/') ? '/ajjitec/' : '/';
+      const path = location.pathname.replace(/^\/ajjitec\//, '/');
+      const productMatch = path.match(/^\/product\/([^/]+)\/?$/);
+      if (productMatch) location.replace(`${base}producto.html?slug=${encodeURIComponent(productMatch[1])}`);
+      else if (path.startsWith('/product-category/')) location.replace(`${base}catalogo.html`);
+      else if (path === '/about-us') location.replace(`${base}index.html#nosotros`);
+      else if (path === '/contact-us') location.replace(`${base}index.html#contacto`);
+    </script>
+  </body>
+</html>
