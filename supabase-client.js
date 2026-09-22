@@ -5,7 +5,7 @@
 
   window.ajjitecSupabase = window.supabase.createClient(
     'https://wtactxmqpldgilwscbci.supabase.co',
-    'sb_publishable_jyYQOjIQhSVOQxTRPZqrwA_QWoGJTZ'
+    'sb_publishable_jyYQOjIQhSVOQxTRPZqrwA_QWoGJTZO'
   );
   window.ajjitecAuthBase = `${window.location.origin}${basePath}`;
 })();
