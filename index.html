@@ -36,14 +36,24 @@
             <a class="button button-ghost" href="#contacto">Habla con un especialista</a>
           </div>
         </div>
-        <div class="hero-visual" aria-label="Microscopio de laboratorio AJJITEC">
+        <div class="hero-visual" aria-label="Elementos de laboratorio AJJITEC">
           <div class="orb orb-one"></div><div class="orb orb-two"></div>
-          <figure class="microscope-card">
-            <img src="assets/microscope-hero.png" alt="Microscopio de laboratorio iluminado en azul" />
-            <figcaption><span>AJJITEC / LABORATORIO</span><strong>PRECISION<br />IN MOTION</strong></figcaption>
-          </figure>
-          <div class="visual-label label-left">IKA / LABORATORIO<br /><span>DESARROLLO</span></div>
-          <div class="visual-label label-right">01 — 04<br /><span>EXPERTISE</span></div>
+          <div class="hero-carousel" data-carousel>
+            <div class="carousel-viewport">
+              <figure class="carousel-slide is-active"><img src="assets/microscope-hero.png" alt="Microscopio de laboratorio iluminado en azul" /></figure>
+              <figure class="carousel-slide"><img src="assets/lab-glassware.png" alt="Matraz, vaso de precipitados y pipeta sobre una mesa de laboratorio" /></figure>
+              <figure class="carousel-slide"><img src="assets/lab-reactor.png" alt="Reactor de laboratorio de acero inoxidable con agitador" /></figure>
+            </div>
+            <div class="carousel-controls">
+              <button class="carousel-arrow" type="button" data-carousel-prev aria-label="Imagen anterior">←</button>
+              <div class="carousel-dots" role="tablist" aria-label="Imágenes de laboratorio">
+                <button class="carousel-dot is-active" type="button" role="tab" aria-selected="true" aria-label="Mostrar microscopio"></button>
+                <button class="carousel-dot" type="button" role="tab" aria-selected="false" aria-label="Mostrar cristalería"></button>
+                <button class="carousel-dot" type="button" role="tab" aria-selected="false" aria-label="Mostrar reactor"></button>
+              </div>
+              <button class="carousel-arrow" type="button" data-carousel-next aria-label="Siguiente imagen">→</button>
+            </div>
+          </div>
         </div>
       </section>
 
