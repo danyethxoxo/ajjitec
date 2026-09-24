@@ -123,11 +123,13 @@
     const role = normalizeRole(profile?.role);
     accountPage.dataset.userRole = role;
 
+    const hasAdminAccess = staffRoles.includes(role);
+    accountPage.dataset.accessState = hasAdminAccess ? 'authorized' : 'pending';
+
     document.querySelectorAll('[data-user-role]').forEach((element) => {
       element.textContent = roleLabels[role] || role;
     });
 
-    const hasAdminAccess = staffRoles.includes(role);
     document.querySelectorAll('[data-admin-content]').forEach((element) => {
       if (hasAdminAccess) element.removeAttribute('hidden');
       else element.setAttribute('hidden', '');

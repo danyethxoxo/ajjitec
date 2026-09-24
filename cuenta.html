@@ -8,11 +8,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css?v=ba1dedd" />
-    <link rel="stylesheet" href="workspace-fallback.css?v=panel-visible-1" />
+    <link rel="stylesheet" href="workspace-fallback.css?v=access-state-2" />
   </head>
   <body>
     <header class="site-header"><a class="brand" href="index.html"><img src="assets/ajjitec-logo.png" alt="AJJITEC Mexicana" /></a><a class="text-link" href="index.html">Volver al sitio público ↗</a></header>
-    <main class="admin-page shell" data-account-page>
+    <main class="admin-page shell" data-account-page data-access-state="loading">
       <div class="workspace-frame">
         <aside class="workspace-sidebar" data-admin-content hidden>
           <div class="workspace-brand"><a href="index.html"><img src="assets/ajjitec-logo.png" alt="AJJITEC Mexicana" /><span><strong>AJJITEC</strong><small>CONTROL OPERATIVO</small></span></a></div>
@@ -54,19 +54,6 @@
       </div>
       </div>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-client.js?v=ba1dedd"></script><script src="auth.js?v=ba1dedd"></script><script src="admin.js?v=ba1dedd"></script>
-    <script>
-      (() => {
-        const revealAdminWorkspace = () => {
-          const isAdmin = [...document.querySelectorAll('[data-user-role]')]
-            .some((element) => element.textContent.trim() === 'Administrador');
-          if (!isAdmin) return;
-          document.querySelectorAll('[data-admin-content]').forEach((element) => element.removeAttribute('hidden'));
-          document.querySelector('[data-access-pending]')?.setAttribute('hidden', '');
-        };
-        window.addEventListener('ajjitec-auth-ready', revealAdminWorkspace);
-        setTimeout(revealAdminWorkspace, 1500);
-      })();
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-client.js?v=ba1dedd"></script><script src="auth.js?v=access-state-2"></script><script src="admin.js?v=ba1dedd"></script>
   </body>
 </html>

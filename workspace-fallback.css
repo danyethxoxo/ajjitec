@@ -1,7 +1,10 @@
-/* Fallback visual para el panel autenticado si el navegador conserva el atributo hidden. */
-body:has([data-account-page][data-user-role="admin"]) .workspace-sidebar[hidden]{display:flex!important}
-body:has([data-account-page][data-user-role="admin"]) .workspace-topbar[hidden]{display:flex!important}
-body:has([data-account-page][data-user-role="admin"]) .workspace-profile-banner[hidden]{display:grid!important}
-body:has([data-account-page][data-user-role="admin"]) .admin-shortcuts[hidden]{display:grid!important}
-body:has([data-account-page][data-user-role="admin"]) .admin-module[data-admin-content][hidden]{display:block!important}
-body:has([data-account-page][data-user-role="admin"]) .workspace-nav a[data-admin-shortcut][hidden]{display:grid!important}
+/* El acceso se controla desde un solo estado en el contenedor de la cuenta. */
+[data-account-page][data-access-state="loading"] .workspace-frame{visibility:hidden}
+[data-account-page][data-access-state="authorized"] .workspace-frame{visibility:visible}
+[data-account-page][data-access-state="authorized"] .workspace-sidebar[hidden]{display:flex!important}
+[data-account-page][data-access-state="authorized"] .workspace-topbar[hidden]{display:flex!important}
+[data-account-page][data-access-state="authorized"] .workspace-profile-banner[hidden]{display:grid!important}
+[data-account-page][data-access-state="authorized"] .admin-shortcuts[hidden]{display:grid!important}
+[data-account-page][data-access-state="authorized"] .admin-module[data-admin-content][hidden]{display:block!important}
+[data-account-page][data-access-state="authorized"] .workspace-nav a[data-admin-shortcut][hidden]{display:grid!important}
+[data-account-page]>.workspace-frame>.workspace-content>.admin-hero{display:none!important}
