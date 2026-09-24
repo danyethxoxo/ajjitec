@@ -17,6 +17,14 @@
     { value: 'active', label: 'Activo' },
     { value: 'inactive', label: 'Inactivo' }
   ];
+  const quoteStatuses = [
+    { value: 'draft', label: 'Borrador' },
+    { value: 'sent', label: 'Enviada' },
+    { value: 'approved', label: 'Aprobada' },
+    { value: 'rejected', label: 'Rechazada' },
+    { value: 'expired', label: 'Vencida' },
+    { value: 'cancelled', label: 'Cancelada' }
+  ];
 
   const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (character) => ({
     '&': '&amp;',
@@ -76,9 +84,16 @@
   const productImages = (product) => Array.isArray(product?.product_images)
     ? product.product_images
     : [];
-  const formatDate = (value) => value
-    ? new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(new Date(value))
-    : 'Sin contacto';
+  const formatDate = (value, empty = 'Sin fecha') => {
+    if (!value) return empty;
+    const raw = String(value);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+      ? new Date(raw + 'T12:00:00')
+      : new Date(raw);
+    return Number.isNaN(date.getTime())
+      ? empty
+      : new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(date);
+  };
 
   const setupPage = ({ profile, user }) => {
     if (!profile || !['admin', 'sales', 'inventory', 'viewer'].includes(profile.role)) return;
@@ -88,8 +103,11 @@
       inventoryWrite: ['admin', 'inventory'].includes(profile.role),
       clients: ['admin', 'sales', 'viewer'].includes(profile.role),
       clientsWrite: ['admin', 'sales'].includes(profile.role),
-      users: profile.role === 'admin'
+      users: profile.role === 'admin',
+      quotes: ['admin', 'sales', 'viewer'].includes(profile.role),
+      quotesWrite: ['admin', 'sales'].includes(profile.role)
     };
+    const quoteProductMap = new Map();
 
     document.querySelector('[data-show-password]')?.addEventListener('click', () => {
       const panel = document.querySelector('[data-password-panel]');
@@ -102,6 +120,7 @@
 
     const inventoryForm = document.querySelector('#inventory-form');
     const clientsForm = document.querySelector('#clients-form');
+    const quoteForm = document.querySelector('#quote-form');
     if (inventoryForm && !permissions.inventoryWrite) {
       inventoryForm.hidden = true;
       setMessage('[data-inventory-status]', 'Vista de solo consulta para este rol.');
@@ -109,6 +128,10 @@
     if (clientsForm && !permissions.clientsWrite) {
       clientsForm.hidden = true;
       setMessage('[data-clients-status]', 'Vista de solo consulta para este rol.');
+    }
+    if (quoteForm && !permissions.quotesWrite) {
+      quoteForm.hidden = true;
+      setMessage('[data-quotes-status]', 'Vista de solo consulta para este rol.');
     }
 
     const renderInventory = (items = []) => {
@@ -169,6 +192,28 @@
       document.querySelector('[data-users-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'usuario' : 'usuarios'));
     };
 
+    const renderQuotes = (items = []) => {
+      const body = document.querySelector('[data-quotes-body]');
+      const empty = document.querySelector('[data-quotes-empty]');
+      if (!body || !empty) return;
+      body.innerHTML = items.map((item) => {
+        const clientRelation = item.clients;
+        const company = clientRelation?.company || clientRelation?.[0]?.company || 'Cliente sin asignar';
+        const itemCount = Array.isArray(item.quote_items) ? item.quote_items.length : 0;
+        const options = quoteStatuses.map((status) => '<option value="' + status.value + '"' + (item.status === status.value ? ' selected' : '') + '>' + status.label + '</option>').join('');
+        const disabled = permissions.quotesWrite ? '' : ' disabled';
+        const saveButton = permissions.quotesWrite
+          ? '<button class="admin-user-save" type="button" data-save-quote="' + item.id + '">Guardar</button>'
+          : '';
+        const deleteButton = permissions.quotesWrite && item.status === 'draft'
+          ? '<button class="admin-delete" type="button" data-delete-quote="' + item.id + '" aria-label="Eliminar cotización">Eliminar</button>'
+          : '';
+        return '<tr data-quote-row="' + item.id + '"><td><code class="admin-code">COT-' + String(item.quote_number).padStart(6, '0') + '</code><small class="admin-user-meta">' + itemCount + ' ' + (itemCount === 1 ? 'partida' : 'partidas') + '</small></td><td><strong>' + escapeHtml(company) + '</strong></td><td><select class="admin-user-control" data-quote-status aria-label="Estado de cotización"' + disabled + '>' + options + '</select></td><td>' + escapeHtml(formatDate(item.valid_until, 'Sin límite')) + '</td><td><strong>' + money(item.total, item.currency) + '</strong></td><td>' + escapeHtml(formatDate(item.created_at)) + '</td><td>' + saveButton + deleteButton + '</td></tr>';
+      }).join('');
+      empty.hidden = items.length > 0;
+      document.querySelector('[data-quotes-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'cotización' : 'cotizaciones'));
+    };
+
     const loadCategories = async () => {
       if (!permissions.inventory) return;
       const selector = document.querySelector('[data-product-category]');
@@ -212,11 +257,145 @@
       renderUsers(data || []);
     };
 
+    const loadQuoteProducts = async () => {
+      if (!permissions.quotes) return;
+      const { data, error } = await client.from('products')
+        .select('id,sku,name,short_description,price,currency')
+        .eq('active', true)
+        .order('name', { ascending: true });
+      if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
+      quoteProductMap.clear();
+      (data || []).forEach((product) => quoteProductMap.set(product.id, product));
+      document.querySelectorAll('[data-quote-product]').forEach((selector) => {
+        selector.innerHTML = '<option value="">Producto o servicio</option>' + (data || [])
+          .map((product) => '<option value="' + product.id + '">' + escapeHtml(product.sku + ' · ' + product.name) + '</option>')
+          .join('');
+      });
+    };
+
+    const loadQuoteClients = async () => {
+      if (!permissions.quotes) return;
+      const selector = document.querySelector('[data-quote-client]');
+      if (!selector) return;
+      const { data, error } = await client.from('clients')
+        .select('id,company,contact_name,status')
+        .order('company', { ascending: true });
+      if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
+      selector.innerHTML = '<option value="">Selecciona un cliente</option>' + (data || [])
+        .map((item) => '<option value="' + item.id + '">' + escapeHtml(item.company + ' · ' + item.contact_name) + '</option>')
+        .join('');
+    };
+
+    const loadQuotes = async () => {
+      if (!permissions.quotes) return;
+      const { data, error } = await client.from('quotes')
+        .select('id,quote_number,status,currency,valid_until,subtotal,tax,total,created_at,updated_at,clients(company,contact_name),quote_items(id)')
+        .order('created_at', { ascending: false });
+      if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
+      renderQuotes(data || []);
+    };
+
     const removeUploadedFiles = async (paths) => {
       if (!paths.length) return null;
       const { error } = await imageBucket.remove(paths);
       return error;
     };
+
+    const updateQuoteSummary = () => {
+      if (!quoteForm) return;
+      const subtotal = [...quoteForm.querySelectorAll('[data-quote-item]')].reduce((sum, row) => {
+        const quantity = Number(row.querySelector('[data-quote-quantity]')?.value || 0);
+        const unitPrice = Number(row.querySelector('[data-quote-price]')?.value || 0);
+        const discount = Number(row.querySelector('[data-quote-discount]')?.value || 0);
+        return sum + (quantity * unitPrice * (1 - discount / 100));
+      }, 0);
+      const taxRate = Number(quoteForm.querySelector('[name="tax_rate"]')?.value || 0);
+      const tax = subtotal * taxRate / 100;
+      document.querySelector('[data-quote-subtotal]')?.replaceChildren(money(subtotal));
+      document.querySelector('[data-quote-tax]')?.replaceChildren(money(tax));
+      document.querySelector('[data-quote-total]')?.replaceChildren(money(subtotal + tax));
+    };
+
+    const resetQuoteBuilder = () => {
+      if (!quoteForm) return;
+      const rows = [...quoteForm.querySelectorAll('[data-quote-item]')];
+      rows.slice(1).forEach((row) => row.remove());
+      quoteForm.reset();
+      updateQuoteSummary();
+    };
+
+    quoteForm?.addEventListener('input', updateQuoteSummary);
+    quoteForm?.addEventListener('change', (event) => {
+      const productControl = event.target.closest?.('[data-quote-product]');
+      if (productControl) {
+        const row = productControl.closest('[data-quote-item]');
+        const product = quoteProductMap.get(productControl.value);
+        if (product && row) {
+          const description = row.querySelector('[data-quote-description]');
+          const price = row.querySelector('[data-quote-price]');
+          if (description && !description.value.trim()) description.value = product.name;
+          if (price) price.value = Number(product.price || 0).toFixed(2);
+        }
+      }
+      updateQuoteSummary();
+    });
+
+    quoteForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!permissions.quotesWrite) return;
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      const values = new FormData(form);
+      const rows = [...form.querySelectorAll('[data-quote-item]')];
+      const items = rows.map((row, index) => {
+        const productId = row.querySelector('[data-quote-product]')?.value || null;
+        const product = productId ? quoteProductMap.get(productId) : null;
+        return {
+          product_id: productId,
+          sku: product?.sku || null,
+          description: String(row.querySelector('[data-quote-description]')?.value || '').trim(),
+          quantity: Number(row.querySelector('[data-quote-quantity]')?.value || 0),
+          unit_price: Number(row.querySelector('[data-quote-price]')?.value || 0),
+          discount_percent: Number(row.querySelector('[data-quote-discount]')?.value || 0),
+          sort_order: index
+        };
+      });
+      if (!values.get('client_id')) return setMessage('[data-quotes-status]', 'Selecciona un cliente para la cotización.', true);
+      if (!items.length || items.some((item) => !item.description || item.quantity <= 0 || item.unit_price < 0 || item.discount_percent < 0 || item.discount_percent > 100)) {
+        return setMessage('[data-quotes-status]', 'Completa al menos una partida con cantidad, descripción y precio válidos.', true);
+      }
+
+      submit.disabled = true;
+      setMessage('[data-quotes-status]', 'Guardando cotización…');
+      try {
+        const { data: quote, error } = await client.from('quotes').insert({
+          client_id: values.get('client_id'),
+          status: 'draft',
+          currency: 'MXN',
+          valid_until: values.get('valid_until') || null,
+          notes: String(values.get('notes') || '').trim() || null,
+          tax_rate: Number(values.get('tax_rate') || 0)
+        }).select('id,quote_number').single();
+        if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
+
+        const { error: itemsError } = await client.from('quote_items').insert(items.map((item) => ({
+          ...item,
+          quote_id: quote.id
+        })));
+        if (itemsError) {
+          await client.from('quotes').delete().eq('id', quote.id);
+          return setMessage('[data-quotes-status]', databaseMessage(itemsError), true);
+        }
+
+        resetQuoteBuilder();
+        setMessage('[data-quotes-status]', 'Cotización COT-' + String(quote.quote_number).padStart(6, '0') + ' guardada correctamente.');
+        await loadQuotes();
+      } catch (error) {
+        setMessage('[data-quotes-status]', databaseMessage(error), true);
+      } finally {
+        submit.disabled = false;
+      }
+    });
 
     inventoryForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -357,6 +536,70 @@
         return;
       }
 
+      const addQuoteItem = event.target.closest?.('[data-add-quote-item]');
+      if (addQuoteItem && permissions.quotesWrite && quoteForm) {
+        const firstRow = quoteForm.querySelector('[data-quote-item]');
+        const itemsContainer = quoteForm.querySelector('[data-quote-items]');
+        if (!firstRow || !itemsContainer) return;
+        const newRow = firstRow.cloneNode(true);
+        newRow.querySelector('[data-quote-product]').value = '';
+        newRow.querySelector('[data-quote-description]').value = '';
+        newRow.querySelector('[data-quote-quantity]').value = '1';
+        newRow.querySelector('[data-quote-price]').value = '0';
+        newRow.querySelector('[data-quote-discount]').value = '0';
+        itemsContainer.append(newRow);
+        updateQuoteSummary();
+        newRow.querySelector('[data-quote-description]')?.focus();
+        return;
+      }
+
+      const removeQuoteItem = event.target.closest?.('[data-remove-quote-item]');
+      if (removeQuoteItem && permissions.quotesWrite && quoteForm) {
+        const rows = [...quoteForm.querySelectorAll('[data-quote-item]')];
+        const row = removeQuoteItem.closest('[data-quote-item]');
+        if (rows.length > 1) row?.remove();
+        else {
+          if (row) {
+            row.querySelector('[data-quote-product]').value = '';
+            row.querySelector('[data-quote-description]').value = '';
+            row.querySelector('[data-quote-quantity]').value = '1';
+            row.querySelector('[data-quote-price]').value = '0';
+            row.querySelector('[data-quote-discount]').value = '0';
+          }
+        }
+        updateQuoteSummary();
+        return;
+      }
+
+      const saveQuote = event.target.closest?.('[data-save-quote]');
+      if (saveQuote && permissions.quotesWrite) {
+        const row = saveQuote.closest('[data-quote-row]');
+        const statusControl = row?.querySelector('[data-quote-status]');
+        if (!row || !statusControl) return;
+        saveQuote.disabled = true;
+        setMessage('[data-quotes-status]', 'Guardando estado…');
+        const { error } = await client.from('quotes')
+          .update({ status: statusControl.value })
+          .eq('id', saveQuote.dataset.saveQuote);
+        saveQuote.disabled = false;
+        if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
+        setMessage('[data-quotes-status]', 'Estado de la cotización actualizado.');
+        loadQuotes();
+        return;
+      }
+
+      const deleteQuote = event.target.closest?.('[data-delete-quote]');
+      if (deleteQuote && permissions.quotesWrite) {
+        if (!window.confirm('¿Eliminar esta cotización?')) return;
+        deleteQuote.disabled = true;
+        const { error } = await client.from('quotes').delete().eq('id', deleteQuote.dataset.deleteQuote);
+        deleteQuote.disabled = false;
+        if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
+        setMessage('[data-quotes-status]', 'Cotización eliminada correctamente.');
+        loadQuotes();
+        return;
+      }
+
       const deleteProduct = event.target.closest?.('[data-delete-product]');
       if (deleteProduct && permissions.inventoryWrite) {
         const productId = deleteProduct.dataset.deleteProduct;
@@ -394,7 +637,14 @@
       }
     });
 
-    Promise.all([loadCategories(), loadInventory(), loadClients(), loadUsers()]);
+    const validUntil = quoteForm?.querySelector('[name="valid_until"]');
+    if (validUntil && !validUntil.value) {
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 30);
+      validUntil.value = defaultDate.toISOString().slice(0, 10);
+    }
+    updateQuoteSummary();
+    Promise.all([loadCategories(), loadInventory(), loadClients(), loadUsers(), loadQuoteProducts(), loadQuoteClients(), loadQuotes()]);
   };
 
   if (window.ajjitecAuthReady) window.ajjitecAuthReady.then(setupPage);

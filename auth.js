@@ -95,7 +95,8 @@
     const moduleRoles = {
       inventory: ['admin', 'inventory', 'viewer'],
       clients: ['admin', 'sales', 'viewer'],
-      users: ['admin']
+      users: ['admin'],
+      quotes: ['admin', 'sales', 'viewer']
     };
     Object.entries(moduleRoles).forEach(([module, roles]) => {
       const visible = roles.includes(role);

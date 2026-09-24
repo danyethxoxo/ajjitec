@@ -297,6 +297,253 @@ create trigger touch_client_updated_at
   before update on public.clients
   for each row execute function private.touch_client_updated_at();
 
+-- Cotizaciones con partidas y totales calculados en la base de datos.
+create sequence if not exists public.quote_number_seq;
+grant usage on sequence public.quote_number_seq to authenticated;
+
+create table if not exists public.quotes (
+  id uuid primary key default gen_random_uuid(),
+  quote_number bigint not null default nextval('public.quote_number_seq') unique,
+  client_id uuid references public.clients(id) on delete set null,
+  created_by uuid not null default auth.uid() references auth.users(id) on delete restrict,
+  assigned_to uuid references auth.users(id) on delete set null,
+  status text not null default 'draft'
+    check (status in ('draft', 'sent', 'approved', 'rejected', 'expired', 'cancelled')),
+  currency char(3) not null default 'MXN' check (currency ~ '^[A-Z]{3}$'),
+  valid_until date,
+  notes text,
+  tax_rate numeric(5,2) not null default 16 check (tax_rate >= 0 and tax_rate <= 100),
+  subtotal numeric(12,2) not null default 0 check (subtotal >= 0),
+  tax numeric(12,2) not null default 0 check (tax >= 0),
+  total numeric(12,2) not null default 0 check (total >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter sequence public.quote_number_seq owned by public.quotes.quote_number;
+alter table public.quotes enable row level security;
+
+revoke all on table public.quotes from anon, authenticated;
+grant select on table public.quotes to authenticated;
+grant insert (client_id, assigned_to, status, currency, valid_until, notes, tax_rate)
+  on table public.quotes to authenticated;
+grant update (client_id, assigned_to, status, currency, valid_until, notes, tax_rate)
+  on table public.quotes to authenticated;
+grant delete on table public.quotes to authenticated;
+
+drop policy if exists "quotes_select_staff" on public.quotes;
+create policy "quotes_select_staff"
+  on public.quotes
+  for select
+  to authenticated
+  using ((select public.has_any_role(array['admin', 'sales', 'viewer'])));
+
+drop policy if exists "quotes_insert_staff" on public.quotes;
+create policy "quotes_insert_staff"
+  on public.quotes
+  for insert
+  to authenticated
+  with check (
+    (select public.has_any_role(array['admin', 'sales']))
+    and created_by = (select auth.uid())
+  );
+
+drop policy if exists "quotes_update_staff" on public.quotes;
+create policy "quotes_update_staff"
+  on public.quotes
+  for update
+  to authenticated
+  using ((select public.has_any_role(array['admin', 'sales'])))
+  with check ((select public.has_any_role(array['admin', 'sales'])));
+
+drop policy if exists "quotes_delete_staff" on public.quotes;
+create policy "quotes_delete_staff"
+  on public.quotes
+  for delete
+  to authenticated
+  using ((select public.has_any_role(array['admin', 'sales'])));
+
+create index if not exists quotes_client_id_idx on public.quotes(client_id);
+create index if not exists quotes_created_by_idx on public.quotes(created_by);
+create index if not exists quotes_assigned_to_idx on public.quotes(assigned_to);
+create index if not exists quotes_status_created_at_idx on public.quotes(status, created_at desc);
+
+create table if not exists public.quote_items (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references public.quotes(id) on delete cascade,
+  product_id uuid references public.products(id) on delete set null,
+  sku text,
+  description text not null,
+  quantity numeric(12,2) not null default 1 check (quantity > 0),
+  unit_price numeric(12,2) not null default 0 check (unit_price >= 0),
+  discount_percent numeric(5,2) not null default 0 check (discount_percent >= 0 and discount_percent <= 100),
+  line_total numeric(12,2) generated always as (
+    round(quantity * unit_price * (1 - discount_percent / 100), 2)
+  ) stored,
+  sort_order integer not null default 0 check (sort_order >= 0),
+  created_at timestamptz not null default now(),
+  constraint quote_items_description_not_blank check (length(trim(description)) > 0)
+);
+
+alter table public.quote_items enable row level security;
+
+revoke all on table public.quote_items from anon, authenticated;
+grant select on table public.quote_items to authenticated;
+grant insert (quote_id, product_id, sku, description, quantity, unit_price, discount_percent, sort_order)
+  on table public.quote_items to authenticated;
+grant update (product_id, sku, description, quantity, unit_price, discount_percent, sort_order)
+  on table public.quote_items to authenticated;
+grant delete on table public.quote_items to authenticated;
+
+drop policy if exists "quote_items_select_staff" on public.quote_items;
+create policy "quote_items_select_staff"
+  on public.quote_items
+  for select
+  to authenticated
+  using (
+    (select public.has_any_role(array['admin', 'sales', 'viewer']))
+    and exists (select 1 from public.quotes where public.quotes.id = quote_items.quote_id)
+  );
+
+drop policy if exists "quote_items_insert_staff" on public.quote_items;
+create policy "quote_items_insert_staff"
+  on public.quote_items
+  for insert
+  to authenticated
+  with check (
+    (select public.has_any_role(array['admin', 'sales']))
+    and exists (select 1 from public.quotes where public.quotes.id = quote_items.quote_id)
+  );
+
+drop policy if exists "quote_items_update_staff" on public.quote_items;
+create policy "quote_items_update_staff"
+  on public.quote_items
+  for update
+  to authenticated
+  using (
+    (select public.has_any_role(array['admin', 'sales']))
+    and exists (select 1 from public.quotes where public.quotes.id = quote_items.quote_id)
+  )
+  with check (
+    (select public.has_any_role(array['admin', 'sales']))
+    and exists (select 1 from public.quotes where public.quotes.id = quote_items.quote_id)
+  );
+
+drop policy if exists "quote_items_delete_staff" on public.quote_items;
+create policy "quote_items_delete_staff"
+  on public.quote_items
+  for delete
+  to authenticated
+  using (
+    (select public.has_any_role(array['admin', 'sales']))
+    and exists (select 1 from public.quotes where public.quotes.id = quote_items.quote_id)
+  );
+
+create index if not exists quote_items_quote_id_idx on public.quote_items(quote_id, sort_order);
+create index if not exists quote_items_product_id_idx on public.quote_items(product_id);
+
+create or replace function private.touch_quote_updated_at()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$function$;
+
+revoke all on function private.touch_quote_updated_at() from public, anon, authenticated, service_role;
+
+drop trigger if exists touch_quote_updated_at on public.quotes;
+create trigger touch_quote_updated_at
+  before update on public.quotes
+  for each row execute function private.touch_quote_updated_at();
+
+create or replace function private.refresh_quote_totals(target_quote_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  next_subtotal numeric(12,2);
+  next_tax numeric(12,2);
+  current_tax_rate numeric(5,2);
+begin
+  if target_quote_id is null then return; end if;
+
+  select quotes.tax_rate
+  into current_tax_rate
+  from public.quotes
+  where quotes.id = target_quote_id;
+
+  if current_tax_rate is null then return; end if;
+
+  select coalesce(sum(quote_items.line_total), 0)::numeric(12,2)
+  into next_subtotal
+  from public.quote_items
+  where quote_items.quote_id = target_quote_id;
+
+  next_tax := round(next_subtotal * current_tax_rate / 100, 2);
+
+  update public.quotes
+  set subtotal = next_subtotal,
+      tax = next_tax,
+      total = next_subtotal + next_tax
+  where quotes.id = target_quote_id;
+end;
+$function$;
+
+revoke all on function private.refresh_quote_totals(uuid) from public, anon, authenticated, service_role;
+
+create or replace function private.refresh_quote_totals_from_item()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  perform private.refresh_quote_totals(coalesce(new.quote_id, old.quote_id));
+  if tg_op = 'UPDATE' and old.quote_id is distinct from new.quote_id then
+    perform private.refresh_quote_totals(old.quote_id);
+  end if;
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function private.refresh_quote_totals_from_item() from public, anon, authenticated, service_role;
+
+drop trigger if exists refresh_quote_totals_from_item on public.quote_items;
+create trigger refresh_quote_totals_from_item
+  after insert or update or delete on public.quote_items
+  for each row execute function private.refresh_quote_totals_from_item();
+
+create or replace function private.refresh_quote_totals_from_quote()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if new.tax_rate is distinct from old.tax_rate then
+    perform private.refresh_quote_totals(new.id);
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function private.refresh_quote_totals_from_quote() from public, anon, authenticated, service_role;
+
+drop trigger if exists refresh_quote_totals_from_quote on public.quotes;
+create trigger refresh_quote_totals_from_quote
+  after update of tax_rate on public.quotes
+  for each row execute function private.refresh_quote_totals_from_quote();
+
 -- Catalogo de productos. Mantiene separado el inventario operativo legado para
 -- poder crecer hacia cotizaciones y una tienda sin romper datos existentes.
 create table if not exists public.product_categories (
