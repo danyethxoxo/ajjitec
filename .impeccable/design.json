@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-23T00:00:00-06:00",
+  "title": "Design System: AJJITEC Light Operations",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "AJJITEC Blue",
+        "canonical": "#1d63d7",
+        "tonalRamp": ["#0d2f61", "#12479f", "#1558bd", "#1d63d7", "#4d88e3", "#86afea", "#b9d7f5", "#edf4fc"]
+      },
+      "primary-dark": {
+        "role": "primary-hover",
+        "displayName": "AJJITEC Blue Deep",
+        "canonical": "#12479f",
+        "tonalRamp": ["#082044", "#0d3271", "#12479f", "#2b66b4", "#5d8ccb", "#8fb3df", "#c5daf2", "#f2f7fd"]
+      },
+      "navy-text": {
+        "role": "text",
+        "displayName": "Navy Text",
+        "canonical": "#12233e",
+        "tonalRamp": ["#07152b", "#0b1c35", "#12233e", "#304562", "#5b718d", "#7b8fa9", "#b1c0d2", "#f6f9fd"]
+      },
+      "cool-paper": {
+        "role": "background",
+        "displayName": "Cool Paper",
+        "canonical": "#f6f9fd",
+        "tonalRamp": ["#12233e", "#304562", "#5b718d", "#7b8fa9", "#b1c0d2", "#d7e3f1", "#edf4fc", "#f6f9fd"]
+      },
+      "surface": {
+        "role": "surface",
+        "displayName": "Surface White",
+        "canonical": "#ffffff",
+        "tonalRamp": ["#12233e", "#304562", "#5b718d", "#7b8fa9", "#b1c0d2", "#d7e3f1", "#edf4fc", "#ffffff"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Manrope Display",
+        "purpose": "Large public statements and major portal headings."
+      },
+      "label": {
+        "displayName": "DM Mono Label",
+        "purpose": "Short uppercase labels, IDs, statuses and measured data."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-lift",
+        "value": "0 12px 30px rgba(31, 83, 145, 0.06)",
+        "purpose": "Quiet separation for white cards on the cool-paper canvas."
+      },
+      {
+        "name": "primary-action-lift",
+        "value": "0 8px 18px rgba(29, 99, 215, 0.16)",
+        "purpose": "Reserved for the primary action."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-standard",
+        "value": "0.2s ease",
+        "purpose": "Button, navigation and border state transitions."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "460px" },
+      { "name": "md", "value": "800px" },
+      { "name": "lg", "value": "1100px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary conversion and submit action.",
+      "html": "<button class=\"ds-btn-primary\">EXPLORE PRODUCTS <span aria-hidden=\"true\">↗</span></button>",
+      "css": ".ds-btn-primary { background: #1d63d7; color: #fff; padding: 14px 22px; border: 0; border-radius: 999px; font: 13px Manrope, Arial, sans-serif; box-shadow: 0 8px 18px rgba(29,99,215,.16); transition: background .2s ease, transform .2s ease; } .ds-btn-primary:hover { background: #12479f; transform: translateY(-2px); } .ds-btn-primary:focus-visible { outline: 2px solid #1d63d7; outline-offset: 3px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action on white surfaces.",
+      "html": "<button class=\"ds-btn-ghost\">TALK TO A SPECIALIST</button>",
+      "css": ".ds-btn-ghost { background: #fff; color: #12479f; padding: 14px 22px; border: 1px solid #a9bfd9; border-radius: 999px; font: 13px Manrope, Arial, sans-serif; transition: background .2s ease, border-color .2s ease; } .ds-btn-ghost:hover { background: #eaf3ff; border-color: #1d63d7; } .ds-btn-ghost:focus-visible { outline: 2px solid #1d63d7; outline-offset: 3px; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "inputs-fields",
+      "description": "White field for catalog and portal data entry.",
+      "html": "<label class=\"ds-field\"><span>SEARCH</span><input placeholder=\"Product name or application…\" /></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: #1d63d7; font: 10px 'DM Mono', monospace; letter-spacing: .08em; } .ds-field input { background: #fff; color: #12233e; border: 1px solid #c7d7e9; border-radius: 6px; padding: 13px 14px; font: 14px Manrope, Arial, sans-serif; } .ds-field input:focus { border-color: #1d63d7; outline: 3px solid rgba(29,99,215,.12); outline-offset: 0; }"
+    },
+    {
+      "name": "Workspace Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat white surface for metrics and operational content.",
+      "html": "<article class=\"ds-card\"><span>ACTIVE PRODUCTS</span><strong>24</strong><small>in the public catalog</small></article>",
+      "css": ".ds-card { background: #fff; color: #12233e; border: 1px solid #d7e3f1; border-radius: 10px; padding: 16px; box-shadow: 0 12px 30px rgba(31,83,145,.06); } .ds-card span { color: #1d63d7; font: 10px 'DM Mono', monospace; letter-spacing: .08em; } .ds-card strong { display: block; margin-top: 18px; font: 500 32px/1 Manrope, Arial, sans-serif; } .ds-card small { display: block; margin-top: 14px; color: #5b718d; font: 10px 'DM Mono', monospace; }"
+    },
+    {
+      "name": "Active Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Portal navigation state with a pale-blue surface and leading rule.",
+      "html": "<a class=\"ds-nav-active\" href=\"#dashboard\"><span>01</span><span>Overview</span></a>",
+      "css": ".ds-nav-active { display: grid; grid-template-columns: 30px 1fr; gap: 8px; padding: 9px 10px; color: #12479f; background: #eaf3ff; border: 1px solid #c5daf2; border-radius: 7px; box-shadow: inset 3px 0 0 #1d63d7; font: 12px Manrope, Arial, sans-serif; text-decoration: none; } .ds-nav-active span:first-child { color: #1d63d7; font: 10px 'DM Mono', monospace; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Blue Technical Clarity",
+    "overview": "AJJITEC uses a white, low-fatigue canvas that lets the existing blue logo become the system's single visual signal. The public site keeps its technical imagery and editorial scale, while the operations portal uses the same surfaces, borders and action color with a denser information rhythm. Surfaces are flat at rest, content is separated with cool blue-gray rules, and blue is reserved for links, active navigation, labels, focus and primary actions.",
+    "keyCharacteristics": [
+      "Cool white canvas with white content surfaces.",
+      "AJJITEC blue as a restrained action and wayfinding color.",
+      "Navy text hierarchy instead of pure black.",
+      "Thin blue-gray borders and soft neutral elevation.",
+      "Shared visual grammar across marketing pages and authenticated operations."
+    ],
+    "rules": [
+      { "name": "The One Blue Rule", "body": "Blue marks something the user can follow, activate or trust; it does not flood every surface.", "section": "colors" },
+      { "name": "The Measure Rule", "body": "Labels can be compact; explanatory copy must retain enough line length and contrast to be read without zooming or squinting.", "section": "typography" },
+      { "name": "The Flat-by-Default Rule", "body": "A surface should read clearly without a shadow; elevation is a small response to importance or interaction.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the logo and its blue as the source of the accent.",
+      "Do use white surfaces and cool paper to separate content without heavy decoration.",
+      "Do preserve visible focus states and responsive collapse behavior."
+    ],
+    "donts": [
+      "Don't reintroduce large dark panels or dark page backgrounds.",
+      "Don't use multiple competing accent colors where blue already communicates state.",
+      "Don't turn every card into a decorative gradient or glowing container."
+    ]
+  }
+}

@@ -1,0 +1,464 @@
+/* AJJITEC light identity: white surfaces, cool neutrals and the logo's blue as the action color. */
+:root {
+  --void: #0d2f61;
+  --canvas: #f6f9fd;
+  --surface: #ffffff;
+  --surface-2: #edf4fc;
+  --text: #12233e;
+  --muted: #5b718d;
+  --dim: #7b8fa9;
+  --line: #d7e3f1;
+  --blue: #1d63d7;
+  --blue-dark: #12479f;
+  --violet: #6d82a5;
+  --primary-tint: #eaf3ff;
+  --success: #238452;
+  --danger: #b42318;
+}
+
+html {
+  color-scheme: light;
+  background: var(--canvas);
+}
+
+body {
+  background: var(--canvas) !important;
+  color: var(--text) !important;
+}
+
+body::before {
+  display: none !important;
+}
+
+.announcement {
+  background: #103d83 !important;
+  color: #f5f9ff !important;
+}
+
+.announcement span {
+  color: #b9d7ff !important;
+}
+
+.site-header {
+  background: #ffffff !important;
+  border-color: var(--line) !important;
+}
+
+.brand,
+.site-header .brand,
+.footer-brand .brand {
+  color: var(--text) !important;
+}
+
+.main-nav a,
+.text-link,
+.site-header .main-nav a {
+  color: #46617f !important;
+}
+
+.main-nav a:hover,
+.text-link:hover,
+.site-header .main-nav a:hover {
+  color: var(--blue-dark) !important;
+}
+
+.login-link,
+.site-header .login-link {
+  color: var(--blue-dark) !important;
+  background: #f4f8fe !important;
+  border-color: #b9cde5 !important;
+}
+
+.login-link span,
+.site-header .login-link span {
+  color: var(--blue) !important;
+}
+
+.menu-toggle {
+  color: var(--blue-dark) !important;
+}
+
+.eyebrow,
+.hero h1 em,
+.section-heading em,
+.intro h2 em,
+.contact-band h2 em,
+.catalog-hero h1 em,
+.product-card-line,
+.card-label,
+.card-cta,
+.service-list span,
+.service-list b,
+.brand-row > span:nth-child(3),
+.catalog-search span,
+.catalog-select span,
+.workspace-nav-label,
+.workspace-kicker,
+.workspace-live,
+.workspace-mini-user small,
+.workspace-profile-trigger small,
+.workspace-topbar-title > span,
+.workspace-empty-index,
+.dashboard-kpis span,
+.dashboard-card-heading > span,
+.admin-table th,
+.admin-status-pill.is-active,
+.quote-document-status span,
+.quote-document-status small,
+.quote-document-table th,
+.quote-document-table code,
+.quote-document-totals .quote-document-total strong {
+  color: var(--blue) !important;
+}
+
+.hero-text,
+.intro-grid > p,
+.section-note,
+.service-list p,
+.footer-brand p,
+.footer-details p,
+.catalog-hero > p:last-child,
+.product-copy > p:not(.eyebrow),
+.product-source p,
+.product-not-found > p:not(.eyebrow),
+.admin-module-heading > p,
+.dashboard-kpis small,
+.dashboard-empty,
+.workspace-profile-copy p,
+.workspace-profile-copy small,
+.workspace-form-actions > span,
+.workspace-empty-state p,
+.quote-document-top p:not(.eyebrow),
+.quote-document-meta p:not(.eyebrow),
+.quote-document-table td,
+.quote-document-totals p,
+.quote-document-notes p:last-child {
+  color: var(--muted) !important;
+}
+
+.button-primary {
+  background: var(--blue) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(29, 99, 215, 0.16);
+}
+
+.button-primary:hover {
+  background: var(--blue-dark) !important;
+}
+
+.button-primary span {
+  color: #dbeaff !important;
+}
+
+.button-ghost {
+  background: #ffffff !important;
+  border-color: #a9bfd9 !important;
+  color: var(--blue-dark) !important;
+}
+
+.button-ghost:hover {
+  background: var(--primary-tint) !important;
+  border-color: var(--blue) !important;
+}
+
+.hero-carousel .carousel-viewport {
+  background: #eef5fc !important;
+  border-color: #b7cde7 !important;
+  box-shadow: 0 20px 45px rgba(31, 83, 145, 0.12) !important;
+}
+
+.hero-carousel .carousel-viewport::after {
+  background: linear-gradient(90deg, rgba(14, 57, 119, 0.18), transparent 52%), linear-gradient(0deg, rgba(14, 57, 119, 0.12), transparent 42%) !important;
+}
+
+.carousel-arrow {
+  border-color: #abc1db !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  color: var(--blue-dark) !important;
+}
+
+.carousel-arrow:hover,
+.carousel-arrow:focus-visible {
+  border-color: var(--blue) !important;
+  background: var(--primary-tint) !important;
+  color: var(--blue-dark) !important;
+}
+
+.carousel-dot {
+  border-color: #7897bd !important;
+}
+
+.carousel-dot.is-active {
+  border-color: var(--blue) !important;
+  background: var(--blue) !important;
+}
+
+.orb-one {
+  background: radial-gradient(circle, rgba(29, 99, 215, 0.13), transparent 68%) !important;
+}
+
+.orb-two {
+  background: radial-gradient(circle, rgba(83, 143, 222, 0.1), transparent 68%) !important;
+}
+
+.intro,
+.services,
+.brands,
+.contact-band,
+.admin-module,
+.product-specs,
+.product-source,
+.compact-footer {
+  border-color: var(--line) !important;
+}
+
+.solution-card,
+.product-card {
+  background: #ffffff !important;
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+  box-shadow: 0 12px 30px rgba(31, 83, 145, 0.06);
+}
+
+.solution-card:hover,
+.product-card:hover {
+  border-color: #8fb3df !important;
+  box-shadow: 0 16px 34px rgba(31, 83, 145, 0.1);
+}
+
+.solution-card h3,
+.product-card h2 a,
+.product-copy h1,
+.product-specs h2,
+.product-not-found h1,
+.service-list h3,
+.intro h2,
+.section-heading h2,
+.contact-band h2,
+.catalog-hero h1,
+.quote-document-top h1,
+.quote-document-meta h2 {
+  color: var(--text) !important;
+}
+
+.solution-icon .icon-line {
+  stroke: var(--blue) !important;
+}
+
+.solution-icon .icon-faint {
+  stroke: rgba(29, 99, 215, 0.22) !important;
+}
+
+.solution-icon .icon-fill {
+  fill: rgba(29, 99, 215, 0.1) !important;
+  stroke: var(--blue) !important;
+}
+
+.product-card-media,
+.product-photo {
+  background: #ffffff !important;
+}
+
+.catalog-search input,
+.catalog-select select,
+.auth-form input,
+.admin-form input,
+.admin-form textarea,
+.admin-form select,
+.workspace-form input,
+.quote-item-row select,
+.quote-item-row input {
+  background: #ffffff !important;
+  border-color: #c7d7e9 !important;
+  color: var(--text) !important;
+}
+
+.catalog-search input:focus,
+.catalog-select select:focus,
+.auth-form input:focus,
+.admin-form input:focus,
+.admin-form textarea:focus,
+.admin-form select:focus,
+.workspace-form input:focus-visible,
+.quote-item-row select:focus-visible,
+.quote-item-row input:focus-visible {
+  border-color: var(--blue) !important;
+  box-shadow: 0 0 0 3px rgba(29, 99, 215, 0.12) !important;
+}
+
+.auth-card {
+  background: #ffffff !important;
+  border-color: var(--line) !important;
+  box-shadow: 0 20px 60px rgba(31, 83, 145, 0.1) !important;
+}
+
+.auth-card h1,
+.auth-card h2 {
+  color: var(--text) !important;
+}
+
+.auth-card > p:not(.eyebrow),
+.auth-form label,
+.auth-help a {
+  color: var(--muted) !important;
+}
+
+.auth-status[data-state="error"],
+.admin-status[data-state="error"] {
+  color: var(--danger) !important;
+}
+
+.site-footer {
+  background: #ffffff !important;
+  color: var(--text) !important;
+  border-top-color: var(--line) !important;
+}
+
+.site-footer .footer-details a,
+.site-footer .footer-bottom a {
+  color: var(--blue-dark) !important;
+}
+
+.site-footer .footer-bottom {
+  border-color: var(--line) !important;
+  color: var(--dim) !important;
+}
+
+.social-icon {
+  border-color: #b9cde5 !important;
+  background: #f4f8fe !important;
+  color: var(--blue-dark) !important;
+}
+
+.social-icon:hover {
+  border-color: var(--blue) !important;
+  background: var(--primary-tint) !important;
+}
+
+/* Portal surfaces inherit the public identity but keep their denser app grammar. */
+body:has([data-account-page]) {
+  background: #f6f9fd !important;
+}
+
+body:has([data-account-page]) .workspace-sidebar {
+  background: #ffffff !important;
+  border-color: var(--line) !important;
+  box-shadow: 0 18px 44px rgba(31, 83, 145, 0.08) !important;
+}
+
+body:has([data-account-page]) .workspace-brand {
+  border-color: var(--line) !important;
+}
+
+body:has([data-account-page]) .workspace-nav a {
+  color: #526d8c !important;
+}
+
+body:has([data-account-page]) .workspace-nav a:hover,
+body:has([data-account-page]) .workspace-nav a.is-active {
+  color: var(--blue-dark) !important;
+  background: var(--primary-tint) !important;
+  border-color: #c5daf2 !important;
+  box-shadow: inset 3px 0 0 var(--blue) !important;
+}
+
+body:has([data-account-page]) .workspace-nav-index,
+body:has([data-account-page]) .workspace-nav a small {
+  color: var(--dim) !important;
+}
+
+body:has([data-account-page]) .workspace-sidebar-footer,
+body:has([data-account-page]) .workspace-topbar,
+body:has([data-account-page]) .workspace-content > .admin-module,
+body:has([data-account-page]) .workspace-content > .admin-module .admin-table-wrap {
+  border-color: var(--line) !important;
+}
+
+body:has([data-account-page]) .workspace-profile-banner,
+body:has([data-account-page]) .workspace-content .dashboard-kpis article,
+body:has([data-account-page]) .workspace-content .dashboard-card,
+body:has([data-account-page]) .workspace-content .admin-form,
+body:has([data-account-page]) .workspace-content .workspace-form,
+body:has([data-account-page]) .workspace-empty-state {
+  background: #ffffff !important;
+  border-color: var(--line) !important;
+  box-shadow: 0 12px 30px rgba(31, 83, 145, 0.06) !important;
+}
+
+body:has([data-account-page]) .workspace-profile-banner:hover,
+body:has([data-account-page]) .workspace-content .dashboard-kpis article:hover,
+body:has([data-account-page]) .workspace-content .dashboard-card:hover {
+  border-color: #9dbde1 !important;
+}
+
+body:has([data-account-page]) .workspace-avatar {
+  border-color: #9fc1e8 !important;
+  background: #eaf3ff !important;
+  color: var(--blue-dark) !important;
+}
+
+body:has([data-account-page]) .workspace-profile-trigger,
+body:has([data-account-page]) .workspace-topbar-title strong,
+body:has([data-account-page]) .workspace-profile-copy h1,
+body:has([data-account-page]) .workspace-content .admin-module-heading h2,
+body:has([data-account-page]) .workspace-content .dashboard-card-heading h3,
+body:has([data-account-page]) .workspace-empty-state h3,
+body:has([data-account-page]) .workspace-mini-user strong,
+body:has([data-account-page]) .workspace-profile-copy p span:first-child,
+body:has([data-account-page]) .workspace-logout:hover {
+  color: var(--text) !important;
+}
+
+body:has([data-account-page]) .workspace-profile-copy p span:first-child,
+body:has([data-account-page]) .workspace-profile-trigger small,
+body:has([data-account-page]) .workspace-mini-user small {
+  color: var(--blue) !important;
+}
+
+body:has([data-account-page]) .workspace-live {
+  color: var(--muted) !important;
+}
+
+body:has([data-account-page]) .workspace-profile-trigger > b,
+body:has([data-account-page]) .workspace-logout,
+body:has([data-account-page]) .workspace-security-heading > span {
+  color: var(--muted) !important;
+}
+
+body:has([data-account-page]) .workspace-empty-state {
+  border-style: dashed !important;
+}
+
+body:has([data-account-page]) .workspace-status-tag,
+body:has([data-account-page]) .admin-status-pill,
+body:has([data-account-page]) .admin-user-save {
+  border-color: #b9cde5 !important;
+  color: var(--blue-dark) !important;
+  background: #f8fbff !important;
+}
+
+body:has([data-account-page]) .workspace-status-tag {
+  background: var(--primary-tint) !important;
+}
+
+body:has([data-account-page]) .admin-table th,
+body:has([data-account-page]) .admin-table td,
+body:has([data-account-page]) .quote-summary,
+body:has([data-account-page]) .quote-summary span {
+  border-color: var(--line) !important;
+}
+
+body:has([data-account-page]) .quote-summary,
+body:has([data-account-page]) .quote-summary span {
+  background: #ffffff !important;
+}
+
+@media (max-width: 800px) {
+  .site-header {
+    background: #ffffff !important;
+  }
+
+  .hero-carousel .carousel-viewport {
+    box-shadow: 0 14px 30px rgba(31, 83, 145, 0.1) !important;
+  }
+}
