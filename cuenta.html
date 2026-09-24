@@ -54,5 +54,18 @@
       </div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-client.js?v=ba1dedd"></script><script src="auth.js?v=ba1dedd"></script><script src="admin.js?v=ba1dedd"></script>
+    <script>
+      (() => {
+        const revealAdminWorkspace = () => {
+          const isAdmin = [...document.querySelectorAll('[data-user-role]')]
+            .some((element) => element.textContent.trim() === 'Administrador');
+          if (!isAdmin) return;
+          document.querySelectorAll('[data-admin-content]').forEach((element) => element.removeAttribute('hidden'));
+          document.querySelector('[data-access-pending]')?.setAttribute('hidden', '');
+        };
+        window.addEventListener('ajjitec-auth-ready', revealAdminWorkspace);
+        setTimeout(revealAdminWorkspace, 1500);
+      })();
+    </script>
   </body>
 </html>
