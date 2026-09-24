@@ -128,14 +128,26 @@
     const clientMap = new Map();
     const quoteMap = new Map();
 
+    const setWorkspaceActive = (target) => {
+      document.querySelectorAll('.workspace-nav a[data-admin-target]').forEach((link) => {
+        link.classList.toggle('is-active', link.dataset.adminTarget === target);
+      });
+    };
     document.querySelector('[data-show-password]')?.addEventListener('click', () => {
+      setWorkspaceActive('profile-panel');
       const panel = document.querySelector('[data-password-panel]');
       panel?.removeAttribute('hidden');
       panel?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
+    document.querySelectorAll('[data-show-profile]').forEach((button) => button.addEventListener('click', () => {
+      setWorkspaceActive('profile-panel');
+      document.querySelector('#profile-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
     document.querySelectorAll('[data-admin-target]').forEach((button) => button.addEventListener('click', () => {
+      setWorkspaceActive(button.dataset.adminTarget);
       document.querySelector('#' + button.dataset.adminTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));
+    setWorkspaceActive('dashboard-panel');
 
     const inventoryForm = document.querySelector('#inventory-form');
     const clientsForm = document.querySelector('#clients-form');

@@ -4,6 +4,7 @@
 
   const form = (id) => document.querySelector(`#${id}`);
   const status = document.querySelector('#auth-status');
+  const profileForm = form('profile-form');
   const accountPage = document.querySelector('[data-account-page]');
   const authBase = window.ajjitecAuthBase || `${window.location.origin}/`;
   const profileColumns = 'id,email,name,company,phone,role,active';
@@ -36,6 +37,32 @@
       'Email rate limit exceeded': 'Demasiados intentos. Espera unos minutos e intentalo de nuevo.'
     };
     return messages[error?.message] || 'No pudimos completar la solicitud. Intentalo de nuevo.';
+  };
+
+  const profileInitials = (profile, user) => {
+    const source = String(profile?.name || user?.email || 'AJJITEC').trim();
+    const initials = source.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('');
+    return (initials || 'AJ').toUpperCase();
+  };
+  const updateIdentity = (profile, user) => {
+    const metadata = user?.user_metadata || {};
+    const name = profile?.name || metadata.name || 'Usuario AJJITEC';
+    const company = profile?.company || metadata.company || 'Empresa no indicada';
+    const phone = profile?.phone || metadata.phone || 'Teléfono no indicado';
+    document.querySelectorAll('[data-user-email]').forEach((element) => element.replaceChildren(user?.email || ''));
+    document.querySelectorAll('[data-user-name]').forEach((element) => element.replaceChildren(name));
+    document.querySelectorAll('[data-user-company]').forEach((element) => element.replaceChildren(company));
+    document.querySelectorAll('[data-user-phone]').forEach((element) => element.replaceChildren(phone));
+    document.querySelectorAll('[data-user-initials]').forEach((element) => element.replaceChildren(profileInitials(profile, user)));
+  };
+  const populateProfileForm = (profile, user) => {
+    if (!profileForm) return;
+    const metadata = user?.user_metadata || {};
+    const field = (name) => profileForm.querySelector(`[name="${name}"]`);
+    field('name').value = profile?.name || metadata.name || '';
+    field('email').value = user?.email || profile?.email || '';
+    field('company').value = profile?.company || metadata.company || '';
+    field('phone').value = profile?.phone || metadata.phone || '';
   };
 
   const fetchProfile = async (user) => {
@@ -71,6 +98,16 @@
     return fetchProfile(user);
   };
 
+  const syncProfileEmail = async (user, profile) => {
+    if (!user?.email || profile?.email === user.email) return profile;
+    const { data, error } = await client.from('profiles')
+      .update({ email: user.email })
+      .eq('id', user.id)
+      .select(profileColumns)
+      .single();
+    return error ? profile : data;
+  };
+
   const profileErrorMessage = (error) => error?.code === '42P01'
     ? 'La base de usuarios aun no esta configurada en Supabase.'
     : 'No pudimos preparar tu perfil de acceso.';
@@ -97,7 +134,9 @@
       inventory: ['admin', 'inventory', 'viewer'],
       clients: ['admin', 'sales', 'viewer'],
       users: ['admin'],
-      quotes: ['admin', 'sales', 'viewer']
+      quotes: ['admin', 'sales', 'viewer'],
+      invoices: ['admin', 'sales', 'viewer'],
+      profile: ['admin', 'sales', 'inventory', 'viewer']
     };
     Object.entries(moduleRoles).forEach(([module, roles]) => {
       const visible = roles.includes(role);
@@ -129,21 +168,20 @@
       return;
     }
 
-    const profile = result.profile;
+    let profile = result.profile;
     if (!profile.active) {
       await client.auth.signOut();
       return window.location.replace(`${authBase}login.html?disabled=1`);
     }
 
-    const metadata = user.user_metadata || {};
-    document.querySelector('[data-user-email]')?.replaceChildren(user.email || '');
-    document.querySelector('[data-user-name]')?.replaceChildren(profile.name || metadata.name || 'Usuario AJJITEC');
-    document.querySelector('[data-user-company]')?.replaceChildren(profile.company || metadata.company || 'Empresa no indicada');
-    document.querySelector('[data-user-phone]')?.replaceChildren(profile.phone || metadata.phone || 'Telefono no indicado');
+    profile = await syncProfileEmail(user, profile);
+    updateIdentity(profile, user);
+    populateProfileForm(profile, user);
     applyAccess(profile);
 
     if (new URLSearchParams(window.location.search).get('reset') === '1') {
       document.querySelector('[data-password-panel]')?.removeAttribute('hidden');
+      document.querySelector('#profile-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     dispatchAuthReady({ user, profile, error: null });
@@ -229,9 +267,52 @@
     });
   }
 
-  document.querySelector('#logout-button')?.addEventListener('click', async () => {
+  document.querySelectorAll('#logout-button, [data-logout-button]').forEach((button) => button.addEventListener('click', async () => {
+    button.disabled = true;
     await client.auth.signOut();
     window.location.replace(`${authBase}login.html`);
+  }));
+
+  profileForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(profileForm);
+    const requestedEmail = String(data.get('email') || '').trim().toLowerCase();
+    const requestedName = String(data.get('name') || '').trim();
+    if (!requestedName || !requestedEmail) return setStatus('Completa tu nombre y correo de acceso.', true);
+    setStatus('Guardando perfil...');
+    const { data: userResult, error: userError } = await client.auth.getUser();
+    if (userError || !userResult.user) return setStatus('Tu sesión ya no está disponible. Inicia sesión de nuevo.', true);
+
+    const currentUser = userResult.user;
+    const emailChanged = requestedEmail !== String(currentUser.email || '').toLowerCase();
+    let authUser = currentUser;
+    let emailConfirmationPending = false;
+    if (emailChanged) {
+      const { data: authResult, error } = await client.auth.updateUser({ email: requestedEmail });
+      if (error) return setStatus(errorMessage(error), true);
+      authUser = authResult.user || currentUser;
+      emailConfirmationPending = String(authUser.email || '').toLowerCase() !== requestedEmail;
+    }
+
+    const profilePayload = {
+      name: requestedName,
+      company: String(data.get('company') || '').trim() || null,
+      phone: String(data.get('phone') || '').trim() || null
+    };
+    if (!emailConfirmationPending) profilePayload.email = requestedEmail;
+    const { data: updatedProfile, error: profileError } = await client.from('profiles')
+      .update(profilePayload)
+      .eq('id', currentUser.id)
+      .select(profileColumns)
+      .single();
+    if (profileError) return setStatus(errorMessage(profileError), true);
+
+    updateIdentity(updatedProfile, authUser);
+    populateProfileForm(updatedProfile, authUser);
+    if (emailConfirmationPending) profileForm.querySelector('[name="email"]').value = requestedEmail;
+    setStatus(emailConfirmationPending
+      ? 'Perfil guardado. Confirma el correo nuevo desde tu bandeja de entrada.'
+      : 'Perfil actualizado correctamente.');
   });
 
   const passwordForm = form('password-form');

@@ -76,12 +76,20 @@ create policy "profiles_insert_own_pending"
 grant update on table public.profiles to authenticated;
 
 drop policy if exists "profiles_update_admin" on public.profiles;
-create policy "profiles_update_admin"
+drop policy if exists "profiles_update_self" on public.profiles;
+drop policy if exists "profiles_update" on public.profiles;
+create policy "profiles_update"
   on public.profiles
   for update
   to authenticated
-  using ((select private.has_any_role(array['admin'])))
-  with check ((select private.has_any_role(array['admin'])));
+  using (
+    (select private.has_any_role(array['admin']))
+    or (select auth.uid()) = id
+  )
+  with check (
+    (select private.has_any_role(array['admin']))
+    or (select auth.uid()) = id
+  );
 
 -- Helper invoker usado por las políticas de los módulos. El usuario solo puede
 -- consultar su propio perfil por RLS, por lo que no expone datos de otros usuarios.
@@ -117,6 +125,12 @@ begin
      or new.role not in ('pending', 'admin', 'sales', 'inventory', 'viewer')
      or new.active is null then
     raise exception 'invalid_profile_access';
+  end if;
+
+  if old.id = (select auth.uid())
+     and not private.has_any_role(array['admin'])
+     and (new.role is distinct from old.role or new.active is distinct from old.active) then
+    raise exception 'not_authorized';
   end if;
 
   if old.id = (select auth.uid())
