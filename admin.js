@@ -94,6 +94,7 @@
       ? empty
       : new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(date);
   };
+  const dateInputValue = (value) => value ? String(value).slice(0, 10) : '';
 
   const setupPage = ({ profile, user }) => {
     if (!profile || !['admin', 'sales', 'inventory', 'viewer'].includes(profile.role)) return;
@@ -110,6 +111,7 @@
     };
     const quoteProductMap = new Map();
     const inventoryProductMap = new Map();
+    const clientMap = new Map();
 
     document.querySelector('[data-show-password]')?.addEventListener('click', () => {
       const panel = document.querySelector('[data-password-panel]');
@@ -146,6 +148,30 @@
       editingProductId = null;
       inventoryForm?.reset();
       setProductFormMode();
+    };
+    let editingClientId = null;
+    const clientSubmit = clientsForm?.querySelector('button[type="submit"]');
+    let cancelClientEdit = clientsForm?.querySelector('[data-cancel-client-edit]');
+    if (clientsForm && clientSubmit && !cancelClientEdit) {
+      cancelClientEdit = document.createElement('button');
+      cancelClientEdit.type = 'button';
+      cancelClientEdit.className = 'admin-user-save admin-form-wide client-cancel-edit';
+      cancelClientEdit.dataset.cancelClientEdit = '';
+      cancelClientEdit.textContent = 'Cancelar edición';
+      cancelClientEdit.hidden = true;
+      clientsForm.insertBefore(cancelClientEdit, clientSubmit);
+    }
+    const setClientFormMode = () => {
+      if (!clientSubmit) return;
+      clientSubmit.innerHTML = editingClientId
+        ? 'Guardar cambios <span>↗</span>'
+        : 'Agregar cliente <span>↗</span>';
+      if (cancelClientEdit) cancelClientEdit.hidden = !editingClientId;
+    };
+    const resetClientForm = () => {
+      editingClientId = null;
+      clientsForm?.reset();
+      setClientFormMode();
     };
     if (inventoryForm && !permissions.inventoryWrite) {
       inventoryForm.hidden = true;
@@ -190,6 +216,8 @@
       const body = document.querySelector('[data-clients-body]');
       const empty = document.querySelector('[data-clients-empty]');
       if (!body || !empty) return;
+      clientMap.clear();
+      items.forEach((item) => clientMap.set(item.id, item));
       body.innerHTML = items.map((item) => {
         const options = clientStatuses.map((status) => '<option value="' + status.value + '"' + (item.status === status.value ? ' selected' : '') + '>' + status.label + '</option>').join('');
         const statusClass = item.status === 'active' ? ' is-active' : '';
@@ -200,7 +228,10 @@
         const saveButton = permissions.clientsWrite
           ? '<button class="admin-user-save" type="button" data-save-client="' + item.id + '">Guardar</button>'
           : '';
-        return '<tr data-client-row="' + item.id + '"><td><strong>' + escapeHtml(item.company) + '</strong><small class="admin-user-meta">' + escapeHtml(item.industry || 'Industria no indicada') + '</small></td><td><strong>' + escapeHtml(item.contact_name) + '</strong><small class="admin-user-meta">' + escapeHtml(item.email || item.phone || 'Sin contacto directo') + '</small></td><td><select class="admin-user-control' + statusClass + '" data-client-status aria-label="Estado de ' + escapeHtml(item.company) + '"' + statusDisabled + '>' + options + '</select></td><td>' + escapeHtml(formatDate(item.last_contact_at)) + '</td><td>' + escapeHtml(item.email || '—') + '<br />' + escapeHtml(item.phone || '—') + '</td><td>' + saveButton + deleteButton + '</td></tr>';
+        const editButton = permissions.clientsWrite
+          ? '<button class="admin-user-save" type="button" data-edit-client="' + item.id + '">Editar</button>'
+          : '';
+        return '<tr data-client-row="' + item.id + '"><td><strong>' + escapeHtml(item.company) + '</strong><small class="admin-user-meta">' + escapeHtml(item.industry || 'Industria no indicada') + '</small></td><td><strong>' + escapeHtml(item.contact_name) + '</strong><small class="admin-user-meta">' + escapeHtml(item.email || item.phone || 'Sin contacto directo') + '</small></td><td><select class="admin-user-control' + statusClass + '" data-client-status aria-label="Estado de ' + escapeHtml(item.company) + '"' + statusDisabled + '>' + options + '</select></td><td>' + escapeHtml(formatDate(item.last_contact_at)) + '</td><td>' + escapeHtml(item.email || '—') + '<br />' + escapeHtml(item.phone || '—') + '</td><td>' + editButton + saveButton + deleteButton + '</td></tr>';
       }).join('');
       empty.hidden = items.length > 0;
       document.querySelector('[data-clients-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'registro' : 'registros'));
@@ -637,27 +668,75 @@
       if (!permissions.clientsWrite) return;
       const form = event.currentTarget;
       const values = new FormData(form);
-      setMessage('[data-clients-status]', 'Guardando cliente…');
-      const { error } = await client.from('clients').insert({
-        company: values.get('company'),
-        contact_name: values.get('contact_name'),
+      const clientPayload = {
+        company: String(values.get('company') || '').trim(),
+        contact_name: String(values.get('contact_name') || '').trim(),
         status: values.get('status') || 'lead',
-        industry: values.get('industry') || null,
-        email: values.get('email') || null,
-        phone: values.get('phone') || null,
-        website: values.get('website') || null,
+        industry: String(values.get('industry') || '').trim() || null,
+        email: String(values.get('email') || '').trim() || null,
+        phone: String(values.get('phone') || '').trim() || null,
+        website: String(values.get('website') || '').trim() || null,
         last_contact_at: values.get('last_contact_at') || null,
-        address: values.get('address') || null,
-        notes: values.get('notes') || null
-      });
-      if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
-      form.reset();
-      setMessage('[data-clients-status]', 'Cliente agregado correctamente.');
-      await loadClients();
-      await loadDashboard();
+        address: String(values.get('address') || '').trim() || null,
+        notes: String(values.get('notes') || '').trim() || null
+      };
+      const wasEditing = Boolean(editingClientId);
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      setMessage('[data-clients-status]', wasEditing ? 'Guardando cambios…' : 'Guardando cliente…');
+      try {
+        let error;
+        if (wasEditing) {
+          const result = await client.from('clients').update(clientPayload).eq('id', editingClientId).select('id').single();
+          error = result.error;
+        } else {
+          const result = await client.from('clients').insert(clientPayload);
+          error = result.error;
+        }
+        if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
+        resetClientForm();
+        setMessage('[data-clients-status]', wasEditing ? 'Cliente actualizado correctamente.' : 'Cliente agregado correctamente.');
+        await loadClients();
+        await loadQuoteClients();
+        await loadDashboard();
+      } catch (error) {
+        setMessage('[data-clients-status]', databaseMessage(error), true);
+      } finally {
+        submit.disabled = false;
+      }
     });
 
     page.addEventListener('click', async (event) => {
+      const cancelClient = event.target.closest?.('[data-cancel-client-edit]');
+      if (cancelClient && permissions.clientsWrite) {
+        resetClientForm();
+        setMessage('[data-clients-status]', 'Edición cancelada.');
+        return;
+      }
+
+      const editClient = event.target.closest?.('[data-edit-client]');
+      if (editClient && permissions.clientsWrite && clientsForm) {
+        const item = clientMap.get(editClient.dataset.editClient);
+        if (!item) return;
+        const field = (name) => clientsForm.querySelector('[name="' + name + '"]');
+        field('company').value = item.company || '';
+        field('contact_name').value = item.contact_name || '';
+        field('status').value = item.status || 'lead';
+        field('industry').value = item.industry || '';
+        field('email').value = item.email || '';
+        field('phone').value = item.phone || '';
+        field('website').value = item.website || '';
+        field('last_contact_at').value = dateInputValue(item.last_contact_at);
+        field('address').value = item.address || '';
+        field('notes').value = item.notes || '';
+        editingClientId = item.id;
+        setClientFormMode();
+        setMessage('[data-clients-status]', 'Editando ' + item.company + '.');
+        clientsForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        field('company').focus();
+        return;
+      }
+
       const cancelProduct = event.target.closest?.('[data-cancel-product-edit]');
       if (cancelProduct && permissions.inventoryWrite) {
         resetProductForm();
