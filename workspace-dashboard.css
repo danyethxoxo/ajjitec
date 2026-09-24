@@ -1,0 +1,263 @@
+/* Dashboard workspace: full-bleed operations layout inspired by the supplied reference. */
+:root {
+  --workspace-sidebar: #070b12;
+  --workspace-panel: #0e1420;
+  --workspace-panel-raised: #121b2a;
+  --workspace-line-soft: rgba(115, 169, 255, 0.14);
+  --workspace-gap: 18px;
+}
+
+body:has([data-account-page]) {
+  padding-top: 0 !important;
+  background:
+    radial-gradient(circle at 76% 0%, rgba(56, 87, 164, 0.11), transparent 28%),
+    var(--canvas);
+}
+
+body:has([data-account-page]) .admin-page {
+  width: calc(100% - 28px) !important;
+  max-width: none !important;
+  padding: 14px 0 34px !important;
+}
+
+.workspace-frame {
+  grid-template-columns: 224px minmax(0, 1fr) !important;
+  gap: var(--workspace-gap) !important;
+  min-height: calc(100vh - 48px);
+}
+
+.workspace-sidebar {
+  top: 14px !important;
+  min-height: calc(100vh - 28px) !important;
+  border: 1px solid var(--workspace-line-soft) !important;
+  border-radius: 14px;
+  background: linear-gradient(165deg, #0a101a 0%, var(--workspace-sidebar) 72%);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.2);
+  padding: 18px 12px 14px !important;
+}
+
+.workspace-brand {
+  padding: 0 8px 18px;
+  border-bottom: 1px solid var(--workspace-line-soft);
+}
+
+.workspace-brand img {
+  width: 96px !important;
+}
+
+.workspace-brand strong {
+  font-size: 14px !important;
+}
+
+.workspace-brand small {
+  font-size: 8px !important;
+}
+
+.workspace-nav {
+  gap: 2px !important;
+  margin-top: 26px !important;
+}
+
+.workspace-nav-label {
+  margin: 0 0 8px !important;
+  padding-left: 10px !important;
+  font-size: 8px !important;
+}
+
+.workspace-nav-label:not(:first-child) {
+  margin-top: 24px !important;
+}
+
+.workspace-nav a {
+  min-height: 36px !important;
+  padding: 8px 9px !important;
+  border-radius: 7px !important;
+  font-size: 11px !important;
+}
+
+.workspace-nav a.is-active {
+  background: linear-gradient(90deg, rgba(115, 169, 255, 0.2), rgba(115, 169, 255, 0.06)) !important;
+  border-color: rgba(115, 169, 255, 0.25) !important;
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.workspace-sidebar-footer {
+  padding: 14px 8px 0 !important;
+}
+
+.workspace-content {
+  min-width: 0;
+  padding-right: 2px;
+}
+
+.workspace-topbar {
+  min-height: 58px !important;
+  padding: 0 6px 14px !important;
+  margin-bottom: 14px !important;
+}
+
+.workspace-topbar-title {
+  gap: 4px !important;
+}
+
+.workspace-topbar-title strong {
+  font-size: 18px !important;
+}
+
+.workspace-profile-banner {
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  gap: 16px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, rgba(18, 27, 42, 0.95), rgba(10, 14, 22, 0.98)) !important;
+  padding: 18px !important;
+  margin-bottom: 0 !important;
+}
+
+.workspace-avatar-large {
+  width: 62px !important;
+  height: 62px !important;
+  border-radius: 9px !important;
+}
+
+.workspace-profile-copy h1 {
+  font-size: clamp(22px, 2.5vw, 30px) !important;
+  margin-top: 4px !important;
+}
+
+.workspace-profile-actions .button {
+  padding: 9px 12px !important;
+}
+
+.workspace-content > .admin-module {
+  padding: 30px 0 56px !important;
+}
+
+.workspace-content > #dashboard-panel {
+  padding-top: 30px !important;
+}
+
+.workspace-content .admin-module-heading {
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr) !important;
+  gap: 28px !important;
+  margin-bottom: 20px !important;
+}
+
+.workspace-content .admin-module-heading h2 {
+  font-size: clamp(30px, 3.4vw, 48px) !important;
+}
+
+.workspace-content .admin-module-heading > p {
+  max-width: 440px !important;
+}
+
+.workspace-content .dashboard-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  background: transparent !important;
+  border: 0 !important;
+  margin-bottom: 18px !important;
+}
+
+.workspace-content .dashboard-kpis article {
+  min-height: 138px !important;
+  gap: 12px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(18, 27, 42, 0.88), rgba(9, 13, 22, 0.96)) !important;
+  padding: 16px !important;
+}
+
+.workspace-content .dashboard-kpis article:hover,
+.workspace-content .dashboard-card:hover {
+  border-color: rgba(115, 169, 255, 0.42) !important;
+}
+
+.workspace-content .dashboard-kpis strong {
+  font-size: clamp(24px, 2.4vw, 36px) !important;
+}
+
+.workspace-content .dashboard-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.workspace-content .dashboard-card {
+  border: 1px solid var(--line) !important;
+  border-radius: 9px !important;
+  background: rgba(14, 20, 32, 0.76) !important;
+  padding: 20px !important;
+}
+
+.workspace-content .dashboard-card-heading {
+  margin-bottom: 22px !important;
+}
+
+.workspace-content .dashboard-card-heading h3 {
+  font-size: 22px !important;
+}
+
+.workspace-content .admin-form,
+.workspace-content .workspace-form {
+  border-radius: 9px !important;
+  background: rgba(14, 20, 32, 0.78) !important;
+}
+
+@media (max-width: 1280px) {
+  .workspace-frame {
+    grid-template-columns: 210px minmax(0, 1fr) !important;
+  }
+
+  .workspace-content .dashboard-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  body:has([data-account-page]) .admin-page {
+    width: calc(100% - 20px) !important;
+    padding-top: 10px !important;
+  }
+
+  .workspace-frame {
+    min-height: 0;
+  }
+
+  .workspace-sidebar {
+    min-height: 0 !important;
+    border-radius: 12px;
+  }
+
+  .workspace-content .admin-module-heading {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .workspace-content .dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .workspace-content .dashboard-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .workspace-profile-banner {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .workspace-profile-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 460px) {
+  .workspace-content .dashboard-kpis {
+    grid-template-columns: 1fr !important;
+  }
+
+  .workspace-content .dashboard-kpis article {
+    min-height: 118px !important;
+  }
+}
