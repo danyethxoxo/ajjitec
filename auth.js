@@ -16,6 +16,12 @@
     inventory: 'Inventario',
     viewer: 'Consulta'
   };
+  const normalizeRole = (value) => ({
+    administrador: 'admin',
+    ventas: 'sales',
+    inventario: 'inventory',
+    consulta: 'viewer'
+  })[String(value || 'pending').trim().toLowerCase()] || String(value || 'pending').trim().toLowerCase();
 
   document.querySelectorAll('a[href^="mailto:"]').forEach((link) => {
     if (link.textContent.toLowerCase().includes('olvid')) link.href = 'recuperar.html';
@@ -114,7 +120,7 @@
 
   const applyAccess = (profile) => {
     if (!accountPage) return;
-    const role = profile?.role || 'pending';
+    const role = normalizeRole(profile?.role);
     accountPage.dataset.userRole = role;
 
     document.querySelectorAll('[data-user-role]').forEach((element) => {
@@ -123,11 +129,15 @@
 
     const hasAdminAccess = staffRoles.includes(role);
     document.querySelectorAll('[data-admin-content]').forEach((element) => {
-      element.hidden = !hasAdminAccess;
+      if (hasAdminAccess) element.removeAttribute('hidden');
+      else element.setAttribute('hidden', '');
     });
 
     const pendingNotice = document.querySelector('[data-access-pending]');
-    if (pendingNotice) pendingNotice.hidden = hasAdminAccess;
+    if (pendingNotice) {
+      if (hasAdminAccess) pendingNotice.setAttribute('hidden', '');
+      else pendingNotice.removeAttribute('hidden');
+    }
 
     const moduleRoles = {
       dashboard: ['admin', 'sales', 'inventory', 'viewer'],
@@ -141,10 +151,12 @@
     Object.entries(moduleRoles).forEach(([module, roles]) => {
       const visible = roles.includes(role);
       document.querySelectorAll(`[data-admin-module="${module}"]`).forEach((element) => {
-        element.hidden = !visible;
+        if (visible) element.removeAttribute('hidden');
+        else element.setAttribute('hidden', '');
       });
       document.querySelectorAll(`[data-admin-shortcut="${module}"]`).forEach((element) => {
-        element.hidden = !visible;
+        if (visible) element.removeAttribute('hidden');
+        else element.setAttribute('hidden', '');
       });
     });
   };
@@ -174,7 +186,7 @@
       return window.location.replace(`${authBase}login.html?disabled=1`);
     }
 
-    profile = await syncProfileEmail(user, profile);
+    profile = { ...await syncProfileEmail(user, profile), role: normalizeRole(profile.role) };
     updateIdentity(profile, user);
     populateProfileForm(profile, user);
     applyAccess(profile);
