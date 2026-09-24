@@ -95,6 +95,20 @@
       : new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(date);
   };
   const dateInputValue = (value) => value ? String(value).slice(0, 10) : '';
+  const csvCell = (value) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+  const downloadCsv = (filename, columns, rows) => {
+    const header = columns.map((column) => csvCell(column.label)).join(',');
+    const body = rows.map((row) => columns.map((column) => csvCell(row[column.key])).join(',')).join('\r\n');
+    const blob = new Blob(['\uFEFF' + header + (body ? '\r\n' + body : '')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
 
   const setupPage = ({ profile, user }) => {
     if (!profile || !['admin', 'sales', 'inventory', 'viewer'].includes(profile.role)) return;
@@ -193,6 +207,24 @@
         : 'Guardar cotización <span>↗</span>';
       if (cancelQuoteEdit) cancelQuoteEdit.hidden = !editingQuoteId;
     };
+    [
+      { report: 'inventory', permission: permissions.inventory, status: '[data-inventory-status]', label: 'Exportar inventario CSV' },
+      { report: 'clients', permission: permissions.clients, status: '[data-clients-status]', label: 'Exportar clientes CSV' },
+      { report: 'quotes', permission: permissions.quotes, status: '[data-quotes-status]', label: 'Exportar cotizaciones CSV' }
+    ].forEach((definition) => {
+      if (!definition.permission) return;
+      const status = document.querySelector(definition.status);
+      if (!status) return;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'admin-export-actions';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'admin-export-button';
+      button.dataset.exportReport = definition.report;
+      button.textContent = definition.label + ' ↗';
+      wrapper.append(button);
+      status.after(wrapper);
+    });
     if (inventoryForm && !permissions.inventoryWrite) {
       inventoryForm.hidden = true;
       setMessage('[data-inventory-status]', 'Vista de solo consulta para este rol.');
@@ -297,6 +329,95 @@
       }).join('');
       empty.hidden = items.length > 0;
       document.querySelector('[data-quotes-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'cotización' : 'cotizaciones'));
+    };
+
+    const exportReport = (report) => {
+      const reportData = {
+        inventory: {
+          filename: 'ajjitec-inventario',
+          status: '[data-inventory-status]',
+          columns: [
+            { key: 'sku', label: 'SKU' },
+            { key: 'name', label: 'Producto' },
+            { key: 'category', label: 'Categoría' },
+            { key: 'slug', label: 'Identificador web' },
+            { key: 'price', label: 'Precio' },
+            { key: 'currency', label: 'Moneda' },
+            { key: 'stock', label: 'Existencias' },
+            { key: 'active', label: 'Visible' },
+            { key: 'featured', label: 'Destacado' },
+            { key: 'photos', label: 'Fotografías' }
+          ],
+          rows: [...inventoryProductMap.values()].map((item) => ({
+            sku: item.sku,
+            name: item.name,
+            category: categoryName(item),
+            slug: item.slug,
+            price: item.price,
+            currency: item.currency,
+            stock: item.stock,
+            active: item.active ? 'Sí' : 'No',
+            featured: item.featured ? 'Sí' : 'No',
+            photos: productImages(item).length
+          }))
+        },
+        clients: {
+          filename: 'ajjitec-clientes',
+          status: '[data-clients-status]',
+          columns: [
+            { key: 'company', label: 'Empresa' },
+            { key: 'contact_name', label: 'Contacto' },
+            { key: 'status', label: 'Estado' },
+            { key: 'industry', label: 'Industria' },
+            { key: 'email', label: 'Correo' },
+            { key: 'phone', label: 'Teléfono' },
+            { key: 'website', label: 'Sitio web' },
+            { key: 'last_contact_at', label: 'Último contacto' },
+            { key: 'address', label: 'Dirección' },
+            { key: 'notes', label: 'Notas' }
+          ],
+          rows: [...clientMap.values()].map((item) => ({
+            ...item,
+            last_contact_at: dateInputValue(item.last_contact_at)
+          }))
+        },
+        quotes: {
+          filename: 'ajjitec-cotizaciones',
+          status: '[data-quotes-status]',
+          columns: [
+            { key: 'folio', label: 'Folio' },
+            { key: 'company', label: 'Cliente' },
+            { key: 'status', label: 'Estado' },
+            { key: 'valid_until', label: 'Vigencia' },
+            { key: 'subtotal', label: 'Subtotal' },
+            { key: 'tax', label: 'IVA' },
+            { key: 'total', label: 'Total' },
+            { key: 'currency', label: 'Moneda' },
+            { key: 'items', label: 'Partidas' },
+            { key: 'created_at', label: 'Creada' }
+          ],
+          rows: [...quoteMap.values()].map((item) => {
+            const relation = item.clients;
+            const status = quoteStatuses.find((option) => option.value === item.status);
+            return {
+              folio: 'COT-' + String(item.quote_number).padStart(6, '0'),
+              company: relation?.company || relation?.[0]?.company || 'Cliente sin asignar',
+              status: status?.label || item.status,
+              valid_until: item.valid_until || '',
+              subtotal: item.subtotal,
+              tax: item.tax,
+              total: item.total,
+              currency: item.currency,
+              items: Array.isArray(item.quote_items) ? item.quote_items.length : 0,
+              created_at: item.created_at
+            };
+          })
+        }
+      }[report];
+      if (!reportData) return;
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadCsv(reportData.filename + '-' + stamp + '.csv', reportData.columns, reportData.rows);
+      setMessage(reportData.status, reportData.rows.length + ' ' + (report === 'inventory' ? 'productos' : report === 'clients' ? 'clientes' : 'cotizaciones') + ' exportados en CSV.');
     };
 
     const renderDashboard = ({ metrics, quoteStatuses: statuses, lowStock }) => {
@@ -791,6 +912,12 @@
     });
 
     page.addEventListener('click', async (event) => {
+      const exportButton = event.target.closest?.('[data-export-report]');
+      if (exportButton) {
+        exportReport(exportButton.dataset.exportReport);
+        return;
+      }
+
       const cancelQuote = event.target.closest?.('[data-cancel-quote-edit]');
       if (cancelQuote && permissions.quotesWrite) {
         resetQuoteBuilder();
