@@ -349,6 +349,64 @@
       });
     };
 
+    let realtimeChannel = null;
+    let realtimeRetry = null;
+    let pageActive = true;
+    const setRealtimeStatus = (message, error = false) => {
+      let element = document.querySelector('[data-realtime-status]');
+      if (!element) {
+        element = document.createElement('p');
+        element.className = 'realtime-status';
+        element.dataset.realtimeStatus = '';
+        element.setAttribute('aria-live', 'polite');
+        document.querySelector('[data-dashboard-status]')?.after(element);
+      }
+      element.textContent = message;
+      element.dataset.state = error ? 'error' : 'success';
+    };
+    const refreshFromRealtime = (table) => {
+      const tasks = [loadDashboard()];
+      if (['products', 'product_images', 'product_categories'].includes(table)) {
+        tasks.push(loadInventory(), loadQuoteProducts(), loadCategories());
+      }
+      if (table === 'clients') tasks.push(loadClients(), loadQuoteClients());
+      if (['quotes', 'quote_items'].includes(table)) tasks.push(loadQuotes());
+      if (table === 'profiles') tasks.push(loadUsers());
+      Promise.all(tasks);
+    };
+    const connectRealtime = () => {
+      if (!pageActive) return;
+      if (realtimeChannel) client.removeChannel(realtimeChannel);
+      const tables = ['profiles', 'product_categories', 'products', 'product_images', 'clients', 'quotes', 'quote_items'];
+      const channel = client.channel('ajjitec-admin-updates');
+      tables.forEach((table) => {
+        channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => refreshFromRealtime(table));
+      });
+      realtimeChannel = channel;
+      channel.subscribe((status, error) => {
+        if (status === 'SUBSCRIBED') {
+          if (realtimeRetry) {
+            clearTimeout(realtimeRetry);
+            realtimeRetry = null;
+          }
+          setRealtimeStatus('● Sincronizado en tiempo real.');
+          return;
+        }
+        if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
+          setRealtimeStatus('Sin conexión en tiempo real. Reintentando…' + (error?.message ? ' ' + error.message : ''), true);
+          if (!realtimeRetry && pageActive) realtimeRetry = setTimeout(() => {
+            realtimeRetry = null;
+            connectRealtime();
+          }, 5000);
+        }
+      });
+    };
+    window.addEventListener('beforeunload', () => {
+      pageActive = false;
+      if (realtimeRetry) clearTimeout(realtimeRetry);
+      if (realtimeChannel) client.removeChannel(realtimeChannel);
+    }, { once: true });
+
     const removeUploadedFiles = async (paths) => {
       if (!paths.length) return null;
       const { error } = await imageBucket.remove(paths);
@@ -709,6 +767,7 @@
     }
     updateQuoteSummary();
     Promise.all([loadDashboard(), loadCategories(), loadInventory(), loadClients(), loadUsers(), loadQuoteProducts(), loadQuoteClients(), loadQuotes()]);
+    connectRealtime();
   };
 
   if (window.ajjitecAuthReady) window.ajjitecAuthReady.then(setupPage);

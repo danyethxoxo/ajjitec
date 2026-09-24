@@ -913,3 +913,30 @@ order by stock asc, name asc;
 
 revoke all on table public.dashboard_metrics, public.dashboard_quote_status, public.dashboard_low_stock from anon, authenticated;
 grant select on table public.dashboard_metrics, public.dashboard_quote_status, public.dashboard_low_stock to authenticated;
+
+-- Tablas que alimentan la sincronización en vivo del área administrativa.
+do $function$
+declare
+  table_name text;
+begin
+  foreach table_name in array array[
+    'profiles',
+    'product_categories',
+    'products',
+    'product_images',
+    'clients',
+    'quotes',
+    'quote_items'
+  ] loop
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = table_name
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', table_name);
+    end if;
+  end loop;
+end;
+$function$;
