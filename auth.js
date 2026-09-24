@@ -6,7 +6,7 @@
   const status = document.querySelector('#auth-status');
   const accountPage = document.querySelector('[data-account-page]');
   const authBase = window.ajjitecAuthBase || `${window.location.origin}/`;
-  const profileColumns = 'id,name,company,phone,role,active';
+  const profileColumns = 'id,email,name,company,phone,role,active';
   const staffRoles = ['admin', 'sales', 'inventory', 'viewer'];
   const roleLabels = {
     pending: 'Acceso pendiente',
@@ -56,6 +56,7 @@
       .from('profiles')
       .insert({
         id: user.id,
+        email: user.email || null,
         name: metadata.name || null,
         company: metadata.company || null,
         phone: metadata.phone || null,
@@ -93,7 +94,8 @@
 
     const moduleRoles = {
       inventory: ['admin', 'inventory', 'viewer'],
-      clients: ['admin', 'sales', 'viewer']
+      clients: ['admin', 'sales', 'viewer'],
+      users: ['admin']
     };
     Object.entries(moduleRoles).forEach(([module, roles]) => {
       const visible = roles.includes(role);

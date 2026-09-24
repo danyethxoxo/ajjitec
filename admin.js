@@ -3,6 +3,14 @@
   const page = document.querySelector('[data-account-page]');
   if (!client || !page) return;
 
+  const roleOptions = [
+    { value: 'pending', label: 'Pendiente' },
+    { value: 'admin', label: 'Administrador' },
+    { value: 'sales', label: 'Ventas' },
+    { value: 'inventory', label: 'Inventario' },
+    { value: 'viewer', label: 'Consulta' }
+  ];
+
   const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (character) => ({
     '&': '&amp;',
     '<': '&lt;',
@@ -21,20 +29,26 @@
     element.dataset.state = error ? 'error' : 'success';
   };
   const databaseMessage = (error) => {
+    const message = error?.message || '';
     if (error?.code === '42P01') return 'Falta crear las tablas en Supabase.';
-    if (error?.code === '42501') return 'Tu rol no tiene permisos para esta operación.';
+    if (error?.code === '42501' || message === 'not_authorized') return 'Tu rol no tiene permisos para esta operación.';
+    if (message === 'invalid_profile_access') return 'El rol o estado seleccionado no es válido.';
+    if (message === 'profile_not_found') return 'No encontramos ese perfil.';
+    if (message === 'cannot_remove_current_admin') return 'No puedes quitarte tu propio acceso de administrador.';
+    if (message === 'cannot_remove_last_admin') return 'Debe quedar al menos un administrador activo.';
     if (error?.code === '23505') return 'Ya existe un registro con esos datos.';
     return 'No pudimos guardar los datos. Inténtalo de nuevo.';
   };
 
-  const setupPage = ({ profile }) => {
+  const setupPage = ({ profile, user }) => {
     if (!profile || !['admin', 'sales', 'inventory', 'viewer'].includes(profile.role)) return;
 
     const permissions = {
       inventory: ['admin', 'inventory', 'viewer'].includes(profile.role),
       inventoryWrite: ['admin', 'inventory'].includes(profile.role),
       clients: ['admin', 'sales', 'viewer'].includes(profile.role),
-      clientsWrite: ['admin', 'sales'].includes(profile.role)
+      clientsWrite: ['admin', 'sales'].includes(profile.role),
+      users: profile.role === 'admin'
     };
 
     document.querySelector('[data-show-password]')?.addEventListener('click', () => {
@@ -85,6 +99,20 @@
       document.querySelector('[data-clients-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'registro' : 'registros'));
     };
 
+    const renderUsers = (items = []) => {
+      const body = document.querySelector('[data-users-body]');
+      const empty = document.querySelector('[data-users-empty]');
+      if (!body || !empty) return;
+      body.innerHTML = items.map((item) => {
+        const options = roleOptions.map((option) => '<option value="' + option.value + '"' + (item.role === option.value ? ' selected' : '') + '>' + option.label + '</option>').join('');
+        const active = item.active ? ' checked' : '';
+        const current = user?.id === item.id ? ' · Tú' : '';
+        return '<tr data-user-row="' + item.id + '"><td><strong>' + escapeHtml(item.name || 'Sin nombre') + '</strong><small class="admin-user-meta">' + escapeHtml(item.email || 'Sin correo') + current + '</small></td><td>' + escapeHtml(item.company || '—') + '</td><td><select class="admin-user-control" data-user-role-control aria-label="Rol de ' + escapeHtml(item.email || item.id) + '">' + options + '</select></td><td><label class="admin-user-active"><input type="checkbox" data-user-active' + active + ' /><span>' + (item.active ? 'Activo' : 'Inactivo') + '</span></label></td><td><button class="admin-user-save" type="button" data-save-user="' + item.id + '">Guardar</button></td></tr>';
+      }).join('');
+      empty.hidden = items.length > 0;
+      document.querySelector('[data-users-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'usuario' : 'usuarios'));
+    };
+
     const loadInventory = async () => {
       if (!permissions.inventory) return;
       const { data, error } = await client.from('inventory_items')
@@ -101,6 +129,15 @@
         .order('created_at', { ascending: false });
       if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
       renderClients(data);
+    };
+
+    const loadUsers = async () => {
+      if (!permissions.users) return;
+      const { data, error } = await client.from('profiles')
+        .select('id,email,name,company,role,active,created_at')
+        .order('created_at', { ascending: false });
+      if (error) return setMessage('[data-users-status]', databaseMessage(error), true);
+      renderUsers(data);
     };
 
     inventoryForm?.addEventListener('submit', async (event) => {
@@ -143,6 +180,28 @@
     });
 
     page.addEventListener('click', async (event) => {
+      const saveUser = event.target.closest?.('[data-save-user]');
+      if (saveUser && permissions.users) {
+        const row = saveUser.closest('[data-user-row]');
+        const roleControl = row?.querySelector('[data-user-role-control]');
+        const activeControl = row?.querySelector('[data-user-active]');
+        if (!row || !roleControl || !activeControl) return;
+        saveUser.disabled = true;
+        setMessage('[data-users-status]', 'Guardando acceso…');
+        const { error } = await client
+          .from('profiles')
+          .update({
+            role: roleControl.value,
+            active: activeControl.checked
+          })
+          .eq('id', saveUser.dataset.saveUser);
+        saveUser.disabled = false;
+        if (error) return setMessage('[data-users-status]', databaseMessage(error), true);
+        setMessage('[data-users-status]', 'Acceso actualizado correctamente.');
+        loadUsers();
+        return;
+      }
+
       const target = event.target.closest?.('[data-delete-inventory], [data-delete-client]');
       if (!target) return;
       const inventoryId = target.dataset.deleteInventory;
@@ -159,7 +218,7 @@
       }
     });
 
-    Promise.all([loadInventory(), loadClients()]);
+    Promise.all([loadInventory(), loadClients(), loadUsers()]);
   };
 
   if (window.ajjitecAuthReady) window.ajjitecAuthReady.then(setupPage);
