@@ -109,6 +109,7 @@
       quotesWrite: ['admin', 'sales'].includes(profile.role)
     };
     const quoteProductMap = new Map();
+    const inventoryProductMap = new Map();
 
     document.querySelector('[data-show-password]')?.addEventListener('click', () => {
       const panel = document.querySelector('[data-password-panel]');
@@ -122,6 +123,30 @@
     const inventoryForm = document.querySelector('#inventory-form');
     const clientsForm = document.querySelector('#clients-form');
     const quoteForm = document.querySelector('#quote-form');
+    let editingProductId = null;
+    const productSubmit = inventoryForm?.querySelector('button[type="submit"]');
+    let cancelProductEdit = inventoryForm?.querySelector('[data-cancel-product-edit]');
+    if (inventoryForm && productSubmit && !cancelProductEdit) {
+      cancelProductEdit = document.createElement('button');
+      cancelProductEdit.type = 'button';
+      cancelProductEdit.className = 'admin-user-save admin-form-wide product-cancel-edit';
+      cancelProductEdit.dataset.cancelProductEdit = '';
+      cancelProductEdit.textContent = 'Cancelar edición';
+      cancelProductEdit.hidden = true;
+      inventoryForm.insertBefore(cancelProductEdit, productSubmit);
+    }
+    const setProductFormMode = () => {
+      if (!productSubmit) return;
+      productSubmit.innerHTML = editingProductId
+        ? 'Guardar cambios <span>↗</span>'
+        : 'Agregar producto <span>↗</span>';
+      if (cancelProductEdit) cancelProductEdit.hidden = !editingProductId;
+    };
+    const resetProductForm = () => {
+      editingProductId = null;
+      inventoryForm?.reset();
+      setProductFormMode();
+    };
     if (inventoryForm && !permissions.inventoryWrite) {
       inventoryForm.hidden = true;
       setMessage('[data-inventory-status]', 'Vista de solo consulta para este rol.');
@@ -139,6 +164,8 @@
       const body = document.querySelector('[data-inventory-body]');
       const empty = document.querySelector('[data-inventory-empty]');
       if (!body || !empty) return;
+      inventoryProductMap.clear();
+      items.forEach((item) => inventoryProductMap.set(item.id, item));
       body.innerHTML = items.map((item) => {
         const images = productImages(item).sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
         const primaryImage = images.find((image) => image.is_primary) || images[0];
@@ -150,10 +177,10 @@
           ? '<span class="admin-status-pill is-active">Visible</span>'
           : '<span class="admin-status-pill">Borrador</span>';
         const featured = item.featured ? '<small class="admin-product-featured">Destacado</small>' : '';
-        const deleteButton = permissions.inventoryWrite
-          ? '<button class="admin-delete" type="button" data-delete-product="' + item.id + '" aria-label="Eliminar ' + escapeHtml(item.name) + '">Eliminar</button>'
+        const productActions = permissions.inventoryWrite
+          ? '<button class="admin-user-save" type="button" data-edit-product="' + item.id + '">Editar</button><button class="admin-delete" type="button" data-delete-product="' + item.id + '" aria-label="Eliminar ' + escapeHtml(item.name) + '">Eliminar</button>'
           : '';
-        return '<tr><td><code class="admin-code">' + escapeHtml(item.sku) + '</code></td><td><div class="admin-product-cell">' + imageCell + '<div><strong>' + escapeHtml(item.name) + '</strong><small>' + escapeHtml(item.short_description || item.slug || 'Sin descripción corta') + '</small></div></div></td><td>' + escapeHtml(categoryName(item)) + '</td><td>' + Number(item.stock || 0) + '</td><td>' + money(item.price, item.currency) + '</td><td>' + status + featured + '</td><td><span class="admin-photo-count">' + images.length + ' ' + (images.length === 1 ? 'foto' : 'fotos') + '</span></td><td>' + deleteButton + '</td></tr>';
+        return '<tr><td><code class="admin-code">' + escapeHtml(item.sku) + '</code></td><td><div class="admin-product-cell">' + imageCell + '<div><strong>' + escapeHtml(item.name) + '</strong><small>' + escapeHtml(item.short_description || item.slug || 'Sin descripción corta') + '</small></div></div></td><td>' + escapeHtml(categoryName(item)) + '</td><td>' + Number(item.stock || 0) + '</td><td>' + money(item.price, item.currency) + '</td><td>' + status + featured + '</td><td><span class="admin-photo-count">' + images.length + ' ' + (images.length === 1 ? 'foto' : 'fotos') + '</span></td><td>' + productActions + '</td></tr>';
       }).join('');
       empty.hidden = items.length > 0;
       document.querySelector('[data-inventory-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'producto' : 'productos'));
@@ -272,7 +299,7 @@
     const loadInventory = async () => {
       if (!permissions.inventory) return;
       const { data, error } = await client.from('products')
-        .select('id,sku,name,slug,short_description,description,price,currency,stock,active,featured,created_at,product_categories(name),product_images(id,storage_path,is_primary,sort_order)')
+        .select('id,category_id,sku,name,slug,short_description,description,price,currency,stock,active,featured,created_at,product_categories(name),product_images(id,storage_path,is_primary,sort_order)')
         .order('created_at', { ascending: false });
       if (error) return setMessage('[data-inventory-status]', databaseMessage(error), true);
       renderInventory(data || []);
@@ -524,22 +551,36 @@
       if (!slug) return setMessage('[data-inventory-status]', 'Agrega un nombre válido para generar el identificador web.', true);
       if (invalidImage) return setMessage('[data-inventory-status]', 'Cada imagen debe ser JPG, PNG, WEBP o AVIF y pesar máximo 5 MB.', true);
 
+      const productPayload = {
+        category_id: values.get('category_id') || null,
+        sku: String(values.get('sku') || '').trim(),
+        name,
+        slug,
+        short_description: String(values.get('short_description') || '').trim() || null,
+        description: String(values.get('description') || '').trim() || null,
+        price: Number(values.get('price') || 0),
+        currency: 'MXN',
+        stock: Number(values.get('stock') || 0),
+        active: values.get('active') === 'true',
+        featured: values.get('featured') === 'true'
+      };
+      const wasEditing = Boolean(editingProductId);
+      const existingProduct = wasEditing ? inventoryProductMap.get(editingProductId) : null;
+      const existingImages = productImages(existingProduct);
       submit.disabled = true;
-      setMessage('[data-inventory-status]', 'Guardando producto…');
+      setMessage('[data-inventory-status]', wasEditing ? 'Guardando cambios…' : 'Guardando producto…');
       try {
-        const { data: product, error } = await client.from('products').insert({
-          category_id: values.get('category_id') || null,
-          sku: String(values.get('sku') || '').trim(),
-          name,
-          slug,
-          short_description: String(values.get('short_description') || '').trim() || null,
-          description: String(values.get('description') || '').trim() || null,
-          price: Number(values.get('price') || 0),
-          currency: 'MXN',
-          stock: Number(values.get('stock') || 0),
-          active: values.get('active') === 'true',
-          featured: values.get('featured') === 'true'
-        }).select('id').single();
+        let product;
+        let error;
+        if (wasEditing) {
+          const result = await client.from('products').update(productPayload).eq('id', editingProductId).select('id').single();
+          product = result.data;
+          error = result.error;
+        } else {
+          const result = await client.from('products').insert(productPayload).select('id').single();
+          product = result.data;
+          error = result.error;
+        }
         if (error) return setMessage('[data-inventory-status]', databaseMessage(error), true);
 
         const uploadedPaths = [];
@@ -555,10 +596,10 @@
           });
           if (uploadError) {
             await removeUploadedFiles(uploadedPaths);
-            form.reset();
+            resetProductForm();
             await loadInventory();
             await loadDashboard();
-            return setMessage('[data-inventory-status]', 'Producto guardado, pero ' + storageMessage(uploadError), true);
+            return setMessage('[data-inventory-status]', (wasEditing ? 'Producto actualizado, pero ' : 'Producto guardado, pero ') + storageMessage(uploadError), true);
           }
           uploadedPaths.push(storagePath);
         }
@@ -568,20 +609,20 @@
             product_id: product.id,
             storage_path: storagePath,
             alt_text: name,
-            sort_order: index,
-            is_primary: index === 0
+            sort_order: existingImages.length + index,
+            is_primary: existingImages.length === 0 && index === 0
           })));
           if (imageError) {
             await removeUploadedFiles(uploadedPaths);
-            form.reset();
+            resetProductForm();
             await loadInventory();
             await loadDashboard();
-            return setMessage('[data-inventory-status]', 'Producto guardado, pero no pudimos registrar sus fotografías.', true);
+            return setMessage('[data-inventory-status]', (wasEditing ? 'Producto actualizado, pero ' : 'Producto guardado, pero ') + 'no pudimos registrar sus fotografías.', true);
           }
         }
 
-        form.reset();
-        setMessage('[data-inventory-status]', 'Producto agregado correctamente.' + (uploadedPaths.length ? ' Fotografías cargadas.' : ''));
+        resetProductForm();
+        setMessage('[data-inventory-status]', (wasEditing ? 'Producto actualizado correctamente.' : 'Producto agregado correctamente.') + (uploadedPaths.length ? ' Fotografías cargadas.' : ''));
         await loadInventory();
         await loadDashboard();
       } catch (error) {
@@ -617,6 +658,37 @@
     });
 
     page.addEventListener('click', async (event) => {
+      const cancelProduct = event.target.closest?.('[data-cancel-product-edit]');
+      if (cancelProduct && permissions.inventoryWrite) {
+        resetProductForm();
+        setMessage('[data-inventory-status]', 'Edición cancelada.');
+        return;
+      }
+
+      const editProduct = event.target.closest?.('[data-edit-product]');
+      if (editProduct && permissions.inventoryWrite && inventoryForm) {
+        const item = inventoryProductMap.get(editProduct.dataset.editProduct);
+        if (!item) return;
+        const field = (name) => inventoryForm.querySelector('[name="' + name + '"]');
+        field('sku').value = item.sku || '';
+        field('name').value = item.name || '';
+        field('category_id').value = item.category_id || '';
+        field('slug').value = item.slug || '';
+        field('stock').value = item.stock ?? 0;
+        field('price').value = item.price ?? 0;
+        field('short_description').value = item.short_description || '';
+        field('description').value = item.description || '';
+        field('active').checked = Boolean(item.active);
+        field('featured').checked = Boolean(item.featured);
+        field('images').value = '';
+        editingProductId = item.id;
+        setProductFormMode();
+        setMessage('[data-inventory-status]', 'Editando ' + item.name + '. Puedes agregar fotografías nuevas.');
+        inventoryForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        field('name').focus();
+        return;
+      }
+
       const saveUser = event.target.closest?.('[data-save-user]');
       if (saveUser && permissions.users) {
         const row = saveUser.closest('[data-user-row]');
