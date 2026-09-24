@@ -12,6 +12,11 @@
   ];
   const imageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
   const imageBucket = client.storage.from('product-images');
+  const clientStatuses = [
+    { value: 'lead', label: 'Prospecto' },
+    { value: 'active', label: 'Activo' },
+    { value: 'inactive', label: 'Inactivo' }
+  ];
 
   const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (character) => ({
     '&': '&amp;',
@@ -71,6 +76,9 @@
   const productImages = (product) => Array.isArray(product?.product_images)
     ? product.product_images
     : [];
+  const formatDate = (value) => value
+    ? new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium' }).format(new Date(value))
+    : 'Sin contacto';
 
   const setupPage = ({ profile, user }) => {
     if (!profile || !['admin', 'sales', 'inventory', 'viewer'].includes(profile.role)) return;
@@ -132,10 +140,16 @@
       const empty = document.querySelector('[data-clients-empty]');
       if (!body || !empty) return;
       body.innerHTML = items.map((item) => {
+        const options = clientStatuses.map((status) => '<option value="' + status.value + '"' + (item.status === status.value ? ' selected' : '') + '>' + status.label + '</option>').join('');
+        const statusClass = item.status === 'active' ? ' is-active' : '';
+        const statusDisabled = permissions.clientsWrite ? '' : ' disabled';
         const deleteButton = permissions.clientsWrite
           ? '<button class="admin-delete" type="button" data-delete-client="' + item.id + '" aria-label="Eliminar ' + escapeHtml(item.company) + '">Eliminar</button>'
           : '';
-        return '<tr><td><strong>' + escapeHtml(item.company) + '</strong></td><td>' + escapeHtml(item.contact_name) + '</td><td>' + escapeHtml(item.email || '—') + '</td><td>' + escapeHtml(item.phone || '—') + '</td><td>' + deleteButton + '</td></tr>';
+        const saveButton = permissions.clientsWrite
+          ? '<button class="admin-user-save" type="button" data-save-client="' + item.id + '">Guardar</button>'
+          : '';
+        return '<tr data-client-row="' + item.id + '"><td><strong>' + escapeHtml(item.company) + '</strong><small class="admin-user-meta">' + escapeHtml(item.industry || 'Industria no indicada') + '</small></td><td><strong>' + escapeHtml(item.contact_name) + '</strong><small class="admin-user-meta">' + escapeHtml(item.email || item.phone || 'Sin contacto directo') + '</small></td><td><select class="admin-user-control' + statusClass + '" data-client-status aria-label="Estado de ' + escapeHtml(item.company) + '"' + statusDisabled + '>' + options + '</select></td><td>' + escapeHtml(formatDate(item.last_contact_at)) + '</td><td>' + escapeHtml(item.email || '—') + '<br />' + escapeHtml(item.phone || '—') + '</td><td>' + saveButton + deleteButton + '</td></tr>';
       }).join('');
       empty.hidden = items.length > 0;
       document.querySelector('[data-clients-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'registro' : 'registros'));
@@ -183,8 +197,8 @@
     const loadClients = async () => {
       if (!permissions.clients) return;
       const { data, error } = await client.from('clients')
-        .select('id,company,contact_name,email,phone,notes,created_at')
-        .order('created_at', { ascending: false });
+        .select('id,company,contact_name,email,phone,industry,website,address,notes,status,last_contact_at,updated_at,created_at')
+        .order('updated_at', { ascending: false });
       if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
       renderClients(data || []);
     };
@@ -290,8 +304,13 @@
       const { error } = await client.from('clients').insert({
         company: values.get('company'),
         contact_name: values.get('contact_name'),
+        status: values.get('status') || 'lead',
+        industry: values.get('industry') || null,
         email: values.get('email') || null,
         phone: values.get('phone') || null,
+        website: values.get('website') || null,
+        last_contact_at: values.get('last_contact_at') || null,
+        address: values.get('address') || null,
         notes: values.get('notes') || null
       });
       if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
@@ -317,6 +336,24 @@
         if (error) return setMessage('[data-users-status]', databaseMessage(error), true);
         setMessage('[data-users-status]', 'Acceso actualizado correctamente.');
         loadUsers();
+        return;
+      }
+
+      const saveClient = event.target.closest?.('[data-save-client]');
+      if (saveClient && permissions.clientsWrite) {
+        const row = saveClient.closest('[data-client-row]');
+        const statusControl = row?.querySelector('[data-client-status]');
+        if (!row || !statusControl) return;
+        saveClient.disabled = true;
+        setMessage('[data-clients-status]', 'Guardando estado…');
+        const { error } = await client
+          .from('clients')
+          .update({ status: statusControl.value })
+          .eq('id', saveClient.dataset.saveClient);
+        saveClient.disabled = false;
+        if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
+        setMessage('[data-clients-status]', 'Estado del cliente actualizado.');
+        loadClients();
         return;
       }
 

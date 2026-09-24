@@ -259,6 +259,44 @@ create policy "clients_delete_staff"
 
 create index if not exists clients_user_id_idx on public.clients(user_id);
 
+-- Campos de seguimiento comercial para preparar clientes y cotizaciones.
+alter table public.clients add column if not exists status text not null default 'lead';
+alter table public.clients add column if not exists industry text;
+alter table public.clients add column if not exists website text;
+alter table public.clients add column if not exists tax_id text;
+alter table public.clients add column if not exists address text;
+alter table public.clients add column if not exists assigned_to uuid references auth.users(id) on delete set null;
+alter table public.clients add column if not exists last_contact_at timestamptz;
+alter table public.clients add column if not exists updated_at timestamptz not null default now();
+
+alter table public.clients drop constraint if exists clients_status_check;
+alter table public.clients add constraint clients_status_check
+  check (status in ('lead', 'active', 'inactive'));
+
+create index if not exists clients_status_updated_at_idx
+  on public.clients(status, updated_at desc);
+create index if not exists clients_assigned_to_idx on public.clients(assigned_to);
+create index if not exists clients_last_contact_at_idx on public.clients(last_contact_at desc);
+
+create or replace function private.touch_client_updated_at()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$function$;
+
+revoke all on function private.touch_client_updated_at() from public, anon, authenticated, service_role;
+
+drop trigger if exists touch_client_updated_at on public.clients;
+create trigger touch_client_updated_at
+  before update on public.clients
+  for each row execute function private.touch_client_updated_at();
+
 -- Catalogo de productos. Mantiene separado el inventario operativo legado para
 -- poder crecer hacia cotizaciones y una tienda sin romper datos existentes.
 create table if not exists public.product_categories (
