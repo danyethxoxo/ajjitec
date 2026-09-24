@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cotización | AJJITEC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="quote-print-body">
+    <header class="site-header quote-print-header"><a class="brand" href="cuenta.html"><img src="assets/ajjitec-logo.png" alt="AJJITEC Mexicana" /></a><div class="quote-print-actions"><a class="text-link" href="cuenta.html">Volver al área administrativa</a><button class="button button-primary" id="print-quote" type="button">Imprimir / PDF <span>↗</span></button></div></header>
+    <main class="quote-document shell" id="quote-print-root" aria-live="polite"><p class="admin-status">Cargando cotización…</p></main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-client.js"></script>
+    <script src="quote.js"></script>
+  </body>
+</html>
