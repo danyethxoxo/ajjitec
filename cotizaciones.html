@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="styles.css?v=portal-routes-1" />
     <link rel="stylesheet" href="workspace-fallback.css?v=access-state-2" />
     <link rel="stylesheet" href="workspace-dashboard.css?v=layout-1" />
-    <link rel="stylesheet" href="light-theme.css?v=portal-routes-5" />
+    <link rel="stylesheet" href="light-theme.css?v=portal-routes-6" />
   </head>
   <body>
     <div class="workspace-route-loader" data-route-loader role="status" aria-label="Cargando apartado">
@@ -36,7 +36,7 @@
         <div class="workspace-content">
           <section class="auth-card account-card" data-access-pending hidden><p class="eyebrow">ACCESO / PENDIENTE</p><h2>Estamos revisando tu solicitud.</h2><p>Tu cuenta ya está creada, pero un administrador debe asignarte permisos antes de habilitar los módulos administrativos.</p></section>
           <section class="admin-module" id="quotes-panel" data-admin-content data-admin-module="quotes" hidden>
-            <div class="admin-module-heading"><div><p class="eyebrow">COTIZACIONES / 04</p><h2>Genera propuestas en minutos.</h2></div><p>Selecciona un cliente, arma las partidas y guarda el historial comercial con totales consistentes.</p></div>
+            <div class="admin-module-heading"><div><p class="eyebrow">COTIZACIONES / 04</p><h2>Cotizaciones</h2></div></div>
             <form class="admin-form quote-form" id="quote-form">
               <label>Cliente<select name="client_id" data-quote-client required><option value="">Selecciona un cliente</option></select></label>
               <label>Vigencia<input name="valid_until" type="date" /></label>
@@ -53,6 +53,6 @@
         </div>
       </div>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-client.js?v=portal-routes-1"></script><script src="auth.js?v=portal-routes-1"></script><script src="admin.js?v=portal-routes-2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-client.js?v=portal-routes-1"></script><script src="auth.js?v=portal-routes-2"></script><script src="admin.js?v=portal-routes-3"></script>
   </body>
 </html>

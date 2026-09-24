@@ -274,6 +274,26 @@
     recoveryForm.reset();
   });
 
+  const invitePasswordForm = form('invite-password-form');
+  invitePasswordForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const data = new FormData(invitePasswordForm);
+    if (data.get('password') !== data.get('password_confirmation')) {
+      return setStatus('Las contraseñas no coinciden.', true);
+    }
+
+    setStatus('Activando acceso...');
+    const { data: sessionResult, error: sessionError } = await client.auth.getSession();
+    if (sessionError || !sessionResult.session) {
+      return setStatus('Este enlace ya no es válido. Solicita una nueva invitación.', true);
+    }
+
+    const { error } = await client.auth.updateUser({ password: data.get('password') });
+    if (error) return setStatus(errorMessage(error), true);
+    setStatus('Acceso activado. Abriendo el portal...');
+    window.setTimeout(() => window.location.replace(`${authBase}resumen.html`), 350);
+  });
+
   if (loginForm) {
     const disabled = new URLSearchParams(window.location.search).get('disabled');
     if (disabled === '1') setStatus('Tu acceso esta desactivado. Contacta al administrador.', true);
@@ -341,6 +361,5 @@
     if (error) return setStatus(errorMessage(error), true);
     setStatus('Contrasena actualizada correctamente.');
     passwordForm.reset();
-    document.querySelector('[data-password-panel]')?.setAttribute('hidden', '');
   });
 })();

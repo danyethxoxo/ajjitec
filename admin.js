@@ -65,6 +65,41 @@
     if (error?.code === '22003' || error?.code === '22P02') return 'Revisa los números capturados.';
     return 'No pudimos guardar los datos. Inténtalo de nuevo.';
   };
+  const adminFunctionMessage = (error) => {
+    const code = typeof error === 'string'
+      ? error
+      : String(error?.error || error?.code || error?.message || '').toLowerCase();
+    const messages = {
+      invalid_email: 'Captura un correo válido.',
+      invalid_role: 'Selecciona un rol válido.',
+      user_already_exists: 'Ese correo ya tiene una cuenta.',
+      email_rate_limited: 'Demasiadas invitaciones. Espera unos minutos.',
+      profile_creation_failed: 'No pudimos preparar el perfil de la cuenta.',
+      cannot_delete_self: 'No puedes eliminar tu propia cuenta.',
+      cannot_remove_last_admin: 'Debe quedar al menos un administrador activo.',
+      delete_failed: 'No pudimos eliminar la cuenta.',
+      not_authorized: 'Tu rol no tiene permisos para esta operación.',
+      not_authenticated: 'Tu sesión ya no está disponible.',
+      function_not_configured: 'La gestión segura de usuarios aún no está configurada.',
+      method_not_allowed: 'La operación no está disponible.',
+      unknown_action: 'La operación no es válida.'
+    };
+    return messages[code] || 'No pudimos completar la operación.';
+  };
+  const invokeAdminFunction = async (body) => {
+    const result = await client.functions.invoke('admin-user-management', { body });
+    if (!result.error && result.data?.ok !== false) return { data: result.data, error: null };
+
+    let payload = result.data;
+    if (result.error?.context?.json) {
+      try {
+        payload = await result.error.context.json();
+      } catch {
+        payload = result.data;
+      }
+    }
+    return { data: payload, error: payload?.error || result.error || 'admin_operation_failed' };
+  };
   const storageMessage = (error) => {
     const message = String(error?.message || '').toLowerCase();
     if (message.includes('mime') || message.includes('type')) return 'El formato de imagen no está permitido.';
@@ -139,6 +174,7 @@
         else link.removeAttribute('aria-current');
       });
     };
+    const authBase = window.ajjitecAuthBase || `${window.location.origin}/`;
     const routeLoader = document.querySelector('[data-route-loader]');
     const showRouteLoader = () => routeLoader?.classList.add('is-visible');
     document.querySelectorAll('.workspace-nav a[href]').forEach((link) => link.addEventListener('click', (event) => {
@@ -179,6 +215,7 @@
     const inventoryForm = document.querySelector('#inventory-form');
     const clientsForm = document.querySelector('#clients-form');
     const quoteForm = document.querySelector('#quote-form');
+    const userInviteForm = document.querySelector('#user-invite-form');
     let editingProductId = null;
     const productSubmit = inventoryForm?.querySelector('button[type="submit"]');
     let cancelProductEdit = inventoryForm?.querySelector('[data-cancel-product-edit]');
@@ -335,8 +372,15 @@
       body.innerHTML = items.map((item) => {
         const options = roleOptions.map((option) => '<option value="' + option.value + '"' + (item.role === option.value ? ' selected' : '') + '>' + option.label + '</option>').join('');
         const active = item.active ? ' checked' : '';
-        const current = user?.id === item.id ? ' · Tú' : '';
-        return '<tr data-user-row="' + item.id + '"><td><strong>' + escapeHtml(item.name || 'Sin nombre') + '</strong><small class="admin-user-meta">' + escapeHtml(item.email || 'Sin correo') + current + '</small></td><td>' + escapeHtml(item.company || '—') + '</td><td><select class="admin-user-control" data-user-role-control aria-label="Rol de ' + escapeHtml(item.email || item.id) + '">' + options + '</select></td><td><label class="admin-user-active"><input type="checkbox" data-user-active' + active + ' /><span>' + (item.active ? 'Activo' : 'Inactivo') + '</span></label></td><td><button class="admin-user-save" type="button" data-save-user="' + item.id + '">Guardar</button></td></tr>';
+        const current = user?.id === item.id;
+        const currentLabel = current ? ' · Tú' : '';
+        const resetButton = current
+          ? ''
+          : '<button class="admin-user-save" type="button" data-reset-user="' + item.id + '" data-reset-email="' + escapeHtml(item.email || '') + '">Restablecer</button>';
+        const deleteButton = current
+          ? ''
+          : '<button class="admin-delete" type="button" data-delete-user="' + item.id + '">Eliminar</button>';
+        return '<tr data-user-row="' + item.id + '"><td><strong>' + escapeHtml(item.name || 'Sin nombre') + '</strong><small class="admin-user-meta">' + escapeHtml(item.email || 'Sin correo') + currentLabel + '</small></td><td>' + escapeHtml(item.company || '—') + '</td><td><select class="admin-user-control" data-user-role-control aria-label="Rol de ' + escapeHtml(item.email || item.id) + '">' + options + '</select></td><td><label class="admin-user-active"><input type="checkbox" data-user-active' + active + ' /><span>' + (item.active ? 'Activo' : 'Inactivo') + '</span></label></td><td><div class="admin-user-actions"><button class="admin-user-save" type="button" data-save-user="' + item.id + '">Guardar</button>' + resetButton + deleteButton + '</div></td></tr>';
       }).join('');
       empty.hidden = items.length > 0;
       document.querySelector('[data-users-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'usuario' : 'usuarios'));
@@ -712,6 +756,33 @@
       if (item.sku) row.dataset.quoteSku = item.sku;
     };
 
+    userInviteForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!permissions.users) return;
+      const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
+      const values = new FormData(form);
+      submit.disabled = true;
+      setMessage('[data-users-status]', 'Enviando invitación…');
+      let result;
+      try {
+        result = await invokeAdminFunction({
+          action: 'invite',
+          email: String(values.get('email') || '').trim().toLowerCase(),
+          role: String(values.get('role') || '').trim(),
+          name: String(values.get('name') || '').trim(),
+          company: String(values.get('company') || '').trim()
+        });
+      } catch (error) {
+        result = { error };
+      }
+      submit.disabled = false;
+      if (result.error) return setMessage('[data-users-status]', adminFunctionMessage(result.error), true);
+      setMessage('[data-users-status]', 'Invitación enviada. La cuenta aparecerá cuando termine su activación.');
+      form.reset();
+      await loadUsers();
+    });
+
     quoteForm?.addEventListener('input', updateQuoteSummary);
     quoteForm?.addEventListener('change', (event) => {
       const productControl = event.target.closest?.('[data-quote-product]');
@@ -1075,6 +1146,41 @@
         if (error) return setMessage('[data-users-status]', databaseMessage(error), true);
         setMessage('[data-users-status]', 'Acceso actualizado correctamente.');
         loadUsers();
+        return;
+      }
+
+      const resetUser = event.target.closest?.('[data-reset-user]');
+      if (resetUser && permissions.users) {
+        const email = resetUser.dataset.resetEmail;
+        if (!email || !window.confirm('¿Enviar un enlace para crear una nueva contraseña a ' + email + '?')) return;
+        resetUser.disabled = true;
+        setMessage('[data-users-status]', 'Enviando restablecimiento…');
+        const { error } = await client.auth.resetPasswordForEmail(email, {
+          redirectTo: `${authBase}cuenta.html?reset=1`
+        });
+        resetUser.disabled = false;
+        if (error) return setMessage('[data-users-status]', 'No pudimos enviar el restablecimiento.', true);
+        setMessage('[data-users-status]', 'Enlace de restablecimiento enviado a ' + email + '.');
+        return;
+      }
+
+      const deleteUserButton = event.target.closest?.('[data-delete-user]');
+      if (deleteUserButton && permissions.users) {
+        const row = deleteUserButton.closest('[data-user-row]');
+        const email = row?.querySelector('.admin-user-meta')?.textContent?.replace(' · Tú', '') || 'esta cuenta';
+        if (!window.confirm('¿Eliminar la cuenta de ' + email + '? Esta acción no se puede deshacer.')) return;
+        deleteUserButton.disabled = true;
+        setMessage('[data-users-status]', 'Eliminando cuenta…');
+        let result;
+        try {
+          result = await invokeAdminFunction({ action: 'delete', userId: deleteUserButton.dataset.deleteUser });
+        } catch (error) {
+          result = { error };
+        }
+        deleteUserButton.disabled = false;
+        if (result.error) return setMessage('[data-users-status]', adminFunctionMessage(result.error), true);
+        setMessage('[data-users-status]', 'Cuenta eliminada correctamente.');
+        await loadUsers();
         return;
       }
 

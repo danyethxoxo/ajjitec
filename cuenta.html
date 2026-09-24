@@ -12,10 +12,18 @@
     </main>
     <noscript><meta http-equiv="refresh" content="0; url=resumen.html" /></noscript>
     <script>
-      const destination = new URLSearchParams(window.location.search).get('reset') === '1'
-        ? 'perfil.html'
-        : 'resumen.html';
-      window.location.replace(destination + window.location.search + window.location.hash);
+      const params = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const hasAuthToken = hashParams.has('access_token');
+      const isInvite = params.get('invite') === '1' || hashParams.get('type') === 'invite';
+      const isRecovery = params.get('reset') === '1' && hasAuthToken;
+      const destination = isInvite || isRecovery
+        ? 'activar.html'
+        : params.get('reset') === '1'
+          ? 'perfil.html'
+          : 'resumen.html';
+      const nextQuery = isInvite ? '?invite=1' : isRecovery ? '?reset=1' : window.location.search;
+      window.location.replace(destination + nextQuery + window.location.hash);
     </script>
   </body>
 </html>

@@ -427,6 +427,30 @@ body:has([data-account-page]) .workspace-security-heading > span {
   color: var(--muted) !important;
 }
 
+body:has([data-account-page]) .workspace-content > .admin-module {
+  border-top: 0 !important;
+}
+
+body:has([data-account-page]) .workspace-content .admin-module-heading {
+  grid-template-columns: 1fr !important;
+}
+
+body:has([data-account-page]) .admin-user-invite {
+  margin-bottom: 24px;
+}
+
+body:has([data-account-page]) .admin-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+body:has([data-account-page]) .admin-user-actions .admin-user-save,
+body:has([data-account-page]) .admin-user-actions .admin-delete {
+  white-space: nowrap;
+}
+
 body:has([data-account-page]) .workspace-empty-state {
   border-style: dashed !important;
 }
