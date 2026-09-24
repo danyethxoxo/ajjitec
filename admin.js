@@ -10,6 +10,8 @@
     { value: 'inventory', label: 'Inventario' },
     { value: 'viewer', label: 'Consulta' }
   ];
+  const imageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+  const imageBucket = client.storage.from('product-images');
 
   const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (character) => ({
     '&': '&amp;',
@@ -18,10 +20,19 @@
     "'": '&#39;',
     '"': '&quot;'
   })[character]);
-  const money = (value) => value === null || value === '' ? '—' : new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN'
-  }).format(value);
+  const slugify = (value = '') => String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const money = (value, currency = 'MXN') => value === null || value === '' || value === undefined
+    ? '—'
+    : new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: String(currency || 'MXN').trim() || 'MXN'
+    }).format(value);
   const setMessage = (selector, message, error = false) => {
     const element = document.querySelector(selector);
     if (!element) return;
@@ -36,9 +47,30 @@
     if (message === 'profile_not_found') return 'No encontramos ese perfil.';
     if (message === 'cannot_remove_current_admin') return 'No puedes quitarte tu propio acceso de administrador.';
     if (message === 'cannot_remove_last_admin') return 'Debe quedar al menos un administrador activo.';
+    if (error?.code === '23503') return 'La categoría seleccionada ya no está disponible.';
     if (error?.code === '23505') return 'Ya existe un registro con esos datos.';
+    if (error?.code === '22003' || error?.code === '22P02') return 'Revisa los números capturados.';
     return 'No pudimos guardar los datos. Inténtalo de nuevo.';
   };
+  const storageMessage = (error) => {
+    const message = String(error?.message || '').toLowerCase();
+    if (message.includes('mime') || message.includes('type')) return 'El formato de imagen no está permitido.';
+    if (message.includes('size') || message.includes('large')) return 'La imagen supera el límite de 5 MB.';
+    if (error?.statusCode === 413) return 'La imagen supera el límite de 5 MB.';
+    if (error?.statusCode === 403 || error?.statusCode === 401) return 'Tu rol no tiene permiso para cargar imágenes.';
+    return 'No pudimos cargar la imagen. Inténtalo de nuevo.';
+  };
+  const categoryName = (product) => {
+    const relation = product?.product_categories;
+    return relation?.name || relation?.[0]?.name || 'Sin categoría';
+  };
+  const publicImageUrl = (storagePath) => {
+    if (!storagePath) return '';
+    return imageBucket.getPublicUrl(storagePath).data?.publicUrl || '';
+  };
+  const productImages = (product) => Array.isArray(product?.product_images)
+    ? product.product_images
+    : [];
 
   const setupPage = ({ profile, user }) => {
     if (!profile || !['admin', 'sales', 'inventory', 'viewer'].includes(profile.role)) return;
@@ -76,13 +108,23 @@
       const empty = document.querySelector('[data-inventory-empty]');
       if (!body || !empty) return;
       body.innerHTML = items.map((item) => {
+        const images = productImages(item).sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+        const primaryImage = images.find((image) => image.is_primary) || images[0];
+        const imageUrl = publicImageUrl(primaryImage?.storage_path);
+        const imageCell = imageUrl
+          ? '<img class="admin-product-thumb" src="' + escapeHtml(imageUrl) + '" alt="" loading="lazy" />'
+          : '<span class="admin-product-thumb admin-product-thumb-empty">—</span>';
+        const status = item.active
+          ? '<span class="admin-status-pill is-active">Visible</span>'
+          : '<span class="admin-status-pill">Borrador</span>';
+        const featured = item.featured ? '<small class="admin-product-featured">Destacado</small>' : '';
         const deleteButton = permissions.inventoryWrite
-          ? '<button class="admin-delete" type="button" data-delete-inventory="' + item.id + '" aria-label="Eliminar ' + escapeHtml(item.name) + '">Eliminar</button>'
+          ? '<button class="admin-delete" type="button" data-delete-product="' + item.id + '" aria-label="Eliminar ' + escapeHtml(item.name) + '">Eliminar</button>'
           : '';
-        return '<tr><td>' + escapeHtml(item.sku) + '</td><td><strong>' + escapeHtml(item.name) + '</strong></td><td>' + escapeHtml(item.category || '—') + '</td><td>' + Number(item.stock || 0) + '</td><td>' + money(item.price) + '</td><td>' + deleteButton + '</td></tr>';
+        return '<tr><td><code class="admin-code">' + escapeHtml(item.sku) + '</code></td><td><div class="admin-product-cell">' + imageCell + '<div><strong>' + escapeHtml(item.name) + '</strong><small>' + escapeHtml(item.short_description || item.slug || 'Sin descripción corta') + '</small></div></div></td><td>' + escapeHtml(categoryName(item)) + '</td><td>' + Number(item.stock || 0) + '</td><td>' + money(item.price, item.currency) + '</td><td>' + status + featured + '</td><td><span class="admin-photo-count">' + images.length + ' ' + (images.length === 1 ? 'foto' : 'fotos') + '</span></td><td>' + deleteButton + '</td></tr>';
       }).join('');
       empty.hidden = items.length > 0;
-      document.querySelector('[data-inventory-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'registro' : 'registros'));
+      document.querySelector('[data-inventory-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'producto' : 'productos'));
     };
 
     const renderClients = (items = []) => {
@@ -113,13 +155,29 @@
       document.querySelector('[data-users-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'usuario' : 'usuarios'));
     };
 
+    const loadCategories = async () => {
+      if (!permissions.inventory) return;
+      const selector = document.querySelector('[data-product-category]');
+      if (!selector) return;
+      const { data, error } = await client.from('product_categories')
+        .select('id,name')
+        .order('name', { ascending: true });
+      if (error) {
+        setMessage('[data-inventory-status]', databaseMessage(error), true);
+        return;
+      }
+      selector.innerHTML = '<option value="">Sin categoría</option>' + (data || [])
+        .map((category) => '<option value="' + category.id + '">' + escapeHtml(category.name) + '</option>')
+        .join('');
+    };
+
     const loadInventory = async () => {
       if (!permissions.inventory) return;
-      const { data, error } = await client.from('inventory_items')
-        .select('id,sku,name,category,stock,price,notes,created_at')
+      const { data, error } = await client.from('products')
+        .select('id,sku,name,slug,short_description,description,price,currency,stock,active,featured,created_at,product_categories(name),product_images(id,storage_path,is_primary,sort_order)')
         .order('created_at', { ascending: false });
       if (error) return setMessage('[data-inventory-status]', databaseMessage(error), true);
-      renderInventory(data);
+      renderInventory(data || []);
     };
 
     const loadClients = async () => {
@@ -128,7 +186,7 @@
         .select('id,company,contact_name,email,phone,notes,created_at')
         .order('created_at', { ascending: false });
       if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
-      renderClients(data);
+      renderClients(data || []);
     };
 
     const loadUsers = async () => {
@@ -137,27 +195,90 @@
         .select('id,email,name,company,role,active,created_at')
         .order('created_at', { ascending: false });
       if (error) return setMessage('[data-users-status]', databaseMessage(error), true);
-      renderUsers(data);
+      renderUsers(data || []);
+    };
+
+    const removeUploadedFiles = async (paths) => {
+      if (!paths.length) return null;
+      const { error } = await imageBucket.remove(paths);
+      return error;
     };
 
     inventoryForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (!permissions.inventoryWrite) return;
       const form = event.currentTarget;
+      const submit = form.querySelector('button[type="submit"]');
       const values = new FormData(form);
+      const name = String(values.get('name') || '').trim();
+      const slug = slugify(values.get('slug') || name);
+      const images = values.getAll('images').filter((file) => file && file.size > 0);
+      const invalidImage = images.find((file) => !imageTypes.has(file.type) || file.size > 5242880);
+      if (!slug) return setMessage('[data-inventory-status]', 'Agrega un nombre válido para generar el identificador web.', true);
+      if (invalidImage) return setMessage('[data-inventory-status]', 'Cada imagen debe ser JPG, PNG, WEBP o AVIF y pesar máximo 5 MB.', true);
+
+      submit.disabled = true;
       setMessage('[data-inventory-status]', 'Guardando producto…');
-      const { error } = await client.from('inventory_items').insert({
-        sku: values.get('sku'),
-        name: values.get('name'),
-        category: values.get('category') || null,
-        stock: Number(values.get('stock') || 0),
-        price: values.get('price') ? Number(values.get('price')) : null,
-        notes: values.get('notes') || null
-      });
-      if (error) return setMessage('[data-inventory-status]', databaseMessage(error), true);
-      form.reset();
-      setMessage('[data-inventory-status]', 'Producto agregado correctamente.');
-      loadInventory();
+      try {
+        const { data: product, error } = await client.from('products').insert({
+          category_id: values.get('category_id') || null,
+          sku: String(values.get('sku') || '').trim(),
+          name,
+          slug,
+          short_description: String(values.get('short_description') || '').trim() || null,
+          description: String(values.get('description') || '').trim() || null,
+          price: Number(values.get('price') || 0),
+          currency: 'MXN',
+          stock: Number(values.get('stock') || 0),
+          active: values.get('active') === 'true',
+          featured: values.get('featured') === 'true'
+        }).select('id').single();
+        if (error) return setMessage('[data-inventory-status]', databaseMessage(error), true);
+
+        const uploadedPaths = [];
+        for (const [index, file] of images.entries()) {
+          const originalName = file.name.replace(/\.[^.]+$/, '');
+          const safeName = slugify(originalName) || 'imagen';
+          const extension = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+          const storagePath = product.id + '/' + Date.now() + '-' + index + '-' + safeName + '.' + extension;
+          const { error: uploadError } = await imageBucket.upload(storagePath, file, {
+            cacheControl: '3600',
+            contentType: file.type,
+            upsert: false
+          });
+          if (uploadError) {
+            await removeUploadedFiles(uploadedPaths);
+            form.reset();
+            await loadInventory();
+            return setMessage('[data-inventory-status]', 'Producto guardado, pero ' + storageMessage(uploadError), true);
+          }
+          uploadedPaths.push(storagePath);
+        }
+
+        if (uploadedPaths.length) {
+          const { error: imageError } = await client.from('product_images').insert(uploadedPaths.map((storagePath, index) => ({
+            product_id: product.id,
+            storage_path: storagePath,
+            alt_text: name,
+            sort_order: index,
+            is_primary: index === 0
+          })));
+          if (imageError) {
+            await removeUploadedFiles(uploadedPaths);
+            form.reset();
+            await loadInventory();
+            return setMessage('[data-inventory-status]', 'Producto guardado, pero no pudimos registrar sus fotografías.', true);
+          }
+        }
+
+        form.reset();
+        setMessage('[data-inventory-status]', 'Producto agregado correctamente.' + (uploadedPaths.length ? ' Fotografías cargadas.' : ''));
+        await loadInventory();
+      } catch (error) {
+        setMessage('[data-inventory-status]', databaseMessage(error), true);
+      } finally {
+        submit.disabled = false;
+      }
     });
 
     clientsForm?.addEventListener('submit', async (event) => {
@@ -190,10 +311,7 @@
         setMessage('[data-users-status]', 'Guardando acceso…');
         const { error } = await client
           .from('profiles')
-          .update({
-            role: roleControl.value,
-            active: activeControl.checked
-          })
+          .update({ role: roleControl.value, active: activeControl.checked })
           .eq('id', saveUser.dataset.saveUser);
         saveUser.disabled = false;
         if (error) return setMessage('[data-users-status]', databaseMessage(error), true);
@@ -202,23 +320,44 @@
         return;
       }
 
-      const target = event.target.closest?.('[data-delete-inventory], [data-delete-client]');
-      if (!target) return;
-      const inventoryId = target.dataset.deleteInventory;
-      const clientId = target.dataset.deleteClient;
-      if (inventoryId && permissions.inventoryWrite) {
-        const { error } = await client.from('inventory_items').delete().eq('id', inventoryId);
-        if (error) return setMessage('[data-inventory-status]', databaseMessage(error), true);
-        loadInventory();
+      const deleteProduct = event.target.closest?.('[data-delete-product]');
+      if (deleteProduct && permissions.inventoryWrite) {
+        const productId = deleteProduct.dataset.deleteProduct;
+        if (!window.confirm('¿Eliminar este producto y sus fotografías?')) return;
+        deleteProduct.disabled = true;
+        setMessage('[data-inventory-status]', 'Eliminando producto…');
+        const { data: images, error: imageQueryError } = await client.from('product_images')
+          .select('storage_path')
+          .eq('product_id', productId);
+        if (imageQueryError) {
+          deleteProduct.disabled = false;
+          return setMessage('[data-inventory-status]', databaseMessage(imageQueryError), true);
+        }
+        const { error: productError } = await client.from('products').delete().eq('id', productId);
+        if (productError) {
+          deleteProduct.disabled = false;
+          return setMessage('[data-inventory-status]', databaseMessage(productError), true);
+        }
+        const paths = (images || []).map((image) => image.storage_path).filter(Boolean);
+        const storageError = await removeUploadedFiles(paths);
+        await loadInventory();
+        deleteProduct.disabled = false;
+        if (storageError) return setMessage('[data-inventory-status]', 'Producto eliminado. Algunas fotografías deberán limpiarse desde Storage.', true);
+        setMessage('[data-inventory-status]', 'Producto eliminado correctamente.');
+        return;
       }
-      if (clientId && permissions.clientsWrite) {
+
+      const deleteClient = event.target.closest?.('[data-delete-client]');
+      if (deleteClient && permissions.clientsWrite) {
+        const clientId = deleteClient.dataset.deleteClient;
+        if (!window.confirm('¿Eliminar este cliente?')) return;
         const { error } = await client.from('clients').delete().eq('id', clientId);
         if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
         loadClients();
       }
     });
 
-    Promise.all([loadInventory(), loadClients(), loadUsers()]);
+    Promise.all([loadCategories(), loadInventory(), loadClients(), loadUsers()]);
   };
 
   if (window.ajjitecAuthReady) window.ajjitecAuthReady.then(setupPage);
