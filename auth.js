@@ -121,7 +121,7 @@
   const applyAccess = (profile) => {
     if (!accountPage) return;
     const role = normalizeRole(profile?.role);
-    accountPage.dataset.userRole = role;
+    accountPage.dataset.accountRole = role;
 
     const hasAdminAccess = staffRoles.includes(role);
     accountPage.dataset.accessState = hasAdminAccess ? 'authorized' : 'pending';
