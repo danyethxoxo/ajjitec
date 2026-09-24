@@ -1,4 +1,4 @@
-const products = window.AJJITEC_PRODUCTS || [];
+let products = window.ajjitecCatalog?.fallbackProducts || window.AJJITEC_PRODUCTS || [];
 const grid = document.querySelector('#product-grid');
 const search = document.querySelector('#catalog-search');
 const category = document.querySelector('#catalog-category');
@@ -10,15 +10,21 @@ const params = new URLSearchParams(window.location.search);
 let selectedLine = params.get('line') || '';
 const initialCategory = params.get('category') || '';
 
-const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-const escapeHtml = (value) => String(value).replace(/[&<>"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[character]);
+const normalize = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 
-const lineOptions = ['', ...new Set(products.map((product) => product.line))];
-lines.innerHTML = lineOptions.map((line) => `<button type="button" class="line-filter${line === selectedLine ? ' is-active' : ''}" data-line="${escapeHtml(line)}">${line || 'Todos'}</button>`).join('');
+const renderLines = () => {
+  const lineOptions = ['', ...new Set(products.map((product) => product.line).filter(Boolean))];
+  if (selectedLine && !lineOptions.includes(selectedLine)) selectedLine = '';
+  lines.innerHTML = lineOptions.map((line) => `<button type="button" class="line-filter${line === selectedLine ? ' is-active' : ''}" data-line="${escapeHtml(line)}">${escapeHtml(line || 'Todos')}</button>`).join('');
+};
 
 const updateCategories = () => {
   const current = category.value;
-  const options = [...new Set(products.filter((product) => !selectedLine || product.line === selectedLine).map((product) => product.category))].sort((a, b) => a.localeCompare(b, 'es'));
+  const options = [...new Set(products
+    .filter((product) => !selectedLine || product.line === selectedLine)
+    .map((product) => product.category)
+    .filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
   category.innerHTML = '<option value="">Todas las categorías</option>' + options.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
   if (options.includes(current)) category.value = current;
   else if (options.includes(initialCategory)) category.value = initialCategory;
@@ -46,8 +52,32 @@ lines.addEventListener('click', (event) => {
 });
 search.addEventListener('input', render);
 category.addEventListener('change', render);
-clear.addEventListener('click', () => { selectedLine = ''; search.value = ''; updateCategories(); lines.querySelectorAll('button').forEach((button) => button.classList.toggle('is-active', !button.dataset.line)); render(); });
+clear.addEventListener('click', () => {
+  selectedLine = '';
+  search.value = '';
+  renderLines();
+  updateCategories();
+  render();
+});
 document.querySelector('#year').textContent = new Date().getFullYear();
-document.querySelector('.menu-toggle')?.addEventListener('click', () => { const nav = document.querySelector('.main-nav'); const open = nav.classList.toggle('open'); document.querySelector('.menu-toggle').setAttribute('aria-expanded', String(open)); });
-updateCategories();
-render();
+document.querySelector('.menu-toggle')?.addEventListener('click', () => {
+  const nav = document.querySelector('.main-nav');
+  const open = nav.classList.toggle('open');
+  document.querySelector('.menu-toggle').setAttribute('aria-expanded', String(open));
+});
+
+const initializeCatalog = async () => {
+  renderLines();
+  updateCategories();
+  render();
+  const loadProducts = window.ajjitecCatalog?.loadProducts;
+  if (!loadProducts) return;
+  const remoteProducts = await loadProducts();
+  if (!Array.isArray(remoteProducts)) return;
+  products = remoteProducts;
+  renderLines();
+  updateCategories();
+  render();
+};
+
+initializeCatalog();
