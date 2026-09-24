@@ -193,7 +193,8 @@
     populateProfileForm(profile, user);
     applyAccess(profile);
 
-    if (new URLSearchParams(window.location.search).get('reset') === '1') {
+    const accountParams = new URLSearchParams(window.location.search);
+    if (accountParams.get('reset') === '1' || accountParams.get('focus') === 'password') {
       document.querySelector('[data-password-panel]')?.removeAttribute('hidden');
       document.querySelector('#profile-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -224,7 +225,7 @@
       await client.auth.signOut();
       return setStatus('Tu acceso esta desactivado. Contacta al administrador.', true);
     }
-    window.location.replace(`${authBase}cuenta.html`);
+    window.location.replace(`${authBase}resumen.html`);
   });
 
   const registerForm = form('register-form');
@@ -254,7 +255,7 @@
         await client.auth.signOut();
         return setStatus(profileErrorMessage(profileResult.error), true);
       }
-      return window.location.replace(`${authBase}cuenta.html`);
+      return window.location.replace(`${authBase}resumen.html`);
     }
     setStatus('Cuenta creada. Revisa tu correo para confirmar el acceso.');
     registerForm.reset();
@@ -277,7 +278,7 @@
     const disabled = new URLSearchParams(window.location.search).get('disabled');
     if (disabled === '1') setStatus('Tu acceso esta desactivado. Contacta al administrador.', true);
     client.auth.getSession().then(({ data }) => {
-      if (data.session) window.location.replace(`${authBase}cuenta.html`);
+      if (data.session) window.location.replace(`${authBase}resumen.html`);
     });
   }
 

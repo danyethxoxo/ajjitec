@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mi perfil | AJJITEC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=portal-routes-1" />
+    <link rel="stylesheet" href="workspace-fallback.css?v=access-state-2" />
+    <link rel="stylesheet" href="workspace-dashboard.css?v=layout-1" />
+    <link rel="stylesheet" href="light-theme.css?v=portal-routes-1" />
+  </head>
+  <body>
+    <main class="admin-page shell" data-account-page data-account-section="profile" data-access-state="loading">
+      <div class="workspace-frame">
+        <aside class="workspace-sidebar" data-admin-content hidden>
+          <div class="workspace-brand"><a href="index.html"><img src="assets/ajjitec-logo.png" alt="AJJITEC Mexicana" /><span><strong>AJJITEC</strong><small>CONTROL OPERATIVO</small></span></a></div>
+          <nav class="workspace-nav" aria-label="Navegación administrativa">
+            <p class="workspace-nav-label">OPERACIÓN</p>
+            <a href="resumen.html" data-admin-target="dashboard-panel" data-admin-shortcut="dashboard"><span class="workspace-nav-index">01</span><span>Resumen</span></a>
+            <a href="cotizaciones.html" data-admin-target="quotes-panel" data-admin-shortcut="quotes"><span class="workspace-nav-index">02</span><span>Cotizaciones</span></a>
+            <a href="clientes.html" data-admin-target="clients-panel" data-admin-shortcut="clients"><span class="workspace-nav-index">03</span><span>Clientes</span></a>
+            <a href="inventario.html" data-admin-target="inventory-panel" data-admin-shortcut="inventory"><span class="workspace-nav-index">04</span><span>Inventario</span></a>
+            <a href="facturas.html" data-admin-target="invoices-panel" data-admin-shortcut="invoices"><span class="workspace-nav-index">05</span><span>Facturas</span><small>Próximamente</small></a>
+            <p class="workspace-nav-label">CUENTA</p>
+            <a href="usuarios.html" data-admin-target="users-panel" data-admin-shortcut="users"><span class="workspace-nav-index">06</span><span>Usuarios</span></a>
+            <a href="perfil.html" data-admin-target="profile-panel" data-admin-shortcut="profile"><span class="workspace-nav-index">07</span><span>Mi perfil</span></a>
+          </nav>
+          <div class="workspace-sidebar-footer"><div class="workspace-mini-user"><span class="workspace-avatar workspace-avatar-small" data-user-initials>DG</span><span><strong data-user-name>Usuario AJJITEC</strong><small data-user-role>Acceso pendiente</small></span></div><button class="workspace-logout" type="button" data-logout-button>Cerrar sesión <span>↗</span></button></div>
+        </aside>
+        <div class="workspace-content">
+          <header class="workspace-topbar" data-admin-content hidden><div class="workspace-topbar-title"><span>AJJITEC / WORKSPACE</span><strong>Mi perfil</strong></div><div class="workspace-topbar-actions"><span class="workspace-live"><i></i>EN VIVO</span><a class="workspace-profile-trigger" href="perfil.html" aria-label="Abrir mi perfil"><span class="workspace-avatar workspace-avatar-tiny" data-user-initials>DG</span><span><strong data-user-name>Usuario AJJITEC</strong><small data-user-role>Acceso pendiente</small></span><b>⌄</b></a></div></header>
+          <section class="auth-card account-card" data-access-pending hidden><p class="eyebrow">ACCESO / PENDIENTE</p><h2>Estamos revisando tu solicitud.</h2><p>Tu cuenta ya está creada, pero un administrador debe asignarte permisos antes de habilitar los módulos administrativos.</p></section>
+          <section class="admin-module workspace-profile-module" id="profile-panel" data-admin-content data-admin-module="profile" hidden>
+            <div class="admin-module-heading"><div><p class="eyebrow">CUENTA / 07</p><h2>Tu perfil de trabajo.</h2></div><p>Actualiza los datos que aparecen en tu sesión y mantén segura tu cuenta.</p></div>
+            <form class="workspace-form" id="profile-form" autocomplete="on"><div class="workspace-form-grid"><label>Nombre completo<input name="name" type="text" autocomplete="name" required /></label><label>Correo de acceso<input name="email" type="email" autocomplete="email" required /></label><label>Empresa<input name="company" type="text" autocomplete="organization" /></label><label>Teléfono<input name="phone" type="tel" autocomplete="tel" /></label></div><div class="workspace-form-actions"><button class="button button-primary" type="submit">Guardar perfil <span>↗</span></button><span>Los cambios de correo pueden requerir confirmación.</span></div></form>
+            <p class="auth-status" id="auth-status" aria-live="polite"></p>
+            <div class="workspace-security" data-password-panel hidden><div class="workspace-security-heading"><div><p class="eyebrow">SEGURIDAD</p><h3>Contraseña de acceso.</h3></div><span>Actualízala periódicamente.</span></div><form class="workspace-form" id="password-form" autocomplete="on"><div class="workspace-form-grid"><label>Nueva contraseña<input type="password" name="password" minlength="6" autocomplete="new-password" required /></label><label>Confirmar contraseña<input type="password" name="password_confirmation" minlength="6" autocomplete="new-password" required /></label></div><div class="workspace-form-actions"><button class="button button-primary" type="submit">Actualizar contraseña <span>↗</span></button></div></form></div>
+          </section>
+        </div>
+      </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-client.js?v=portal-routes-1"></script><script src="auth.js?v=portal-routes-1"></script><script src="admin.js?v=portal-routes-1"></script>
+  </body>
+</html>

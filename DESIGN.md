@@ -119,7 +119,7 @@ The palette is deliberately neutral-heavy: white and cool paper carry most of th
 
 ## Layout
 
-Public pages use a centered editorial shell with generous section spacing and image-led product moments. The operations portal uses a near full-viewport frame: a compact persistent sidebar, a flexible content column and five-up dashboard metrics that collapse to three, two and one columns at smaller widths.
+Public pages use a centered editorial shell with generous section spacing and image-led product moments. The operations portal uses a full-viewport frame: a compact persistent sidebar flush to the left, top and bottom edges, a flexible content column and five-up dashboard metrics that collapse to three, two and one columns at smaller widths. Each operational module has its own static route so navigation and browser history remain explicit.
 
 The shared rhythm is based on 8px increments, with 16px control gaps, 24px card padding and larger separation before major headings. At mobile widths, the portal sidebar becomes a normal top section and all dense grids become a single readable column.
 

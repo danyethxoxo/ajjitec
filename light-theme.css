@@ -462,3 +462,63 @@ body:has([data-account-page]) .quote-summary span {
     box-shadow: 0 14px 30px rgba(31, 83, 145, 0.1) !important;
   }
 }
+
+/* Portal frame: the sidebar owns the full left edge; content owns its reading inset. */
+body:has([data-account-page]) {
+  margin: 0 !important;
+  min-width: 0;
+}
+
+body:has([data-account-page]) .admin-page {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body:has([data-account-page]) .workspace-frame {
+  gap: 0 !important;
+  min-height: 100vh !important;
+}
+
+body:has([data-account-page]) .workspace-sidebar {
+  top: 0 !important;
+  min-height: 100vh !important;
+  height: 100vh !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+  border-radius: 0 !important;
+}
+
+body:has([data-account-page]) .workspace-content {
+  padding: 0 clamp(20px, 3vw, 48px) 64px !important;
+}
+
+body:has([data-account-page]) .workspace-profile-trigger,
+body:has([data-account-page]) .admin-shortcut {
+  text-decoration: none;
+}
+
+@media (max-width: 900px) {
+  body:has([data-account-page]) .admin-page {
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body:has([data-account-page]) .workspace-sidebar {
+    height: auto !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  body:has([data-account-page]) .workspace-content {
+    padding: 0 20px 48px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  body:has([data-account-page]) .workspace-content {
+    padding: 0 16px 40px !important;
+  }
+}

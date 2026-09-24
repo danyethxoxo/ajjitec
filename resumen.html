@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resumen | AJJITEC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=portal-routes-1" />
+    <link rel="stylesheet" href="workspace-fallback.css?v=access-state-2" />
+    <link rel="stylesheet" href="workspace-dashboard.css?v=layout-1" />
+    <link rel="stylesheet" href="light-theme.css?v=portal-routes-1" />
+  </head>
+  <body>
+    <main class="admin-page shell" data-account-page data-account-section="dashboard" data-access-state="loading">
+      <div class="workspace-frame">
+        <aside class="workspace-sidebar" data-admin-content hidden>
+          <div class="workspace-brand"><a href="index.html"><img src="assets/ajjitec-logo.png" alt="AJJITEC Mexicana" /><span><strong>AJJITEC</strong><small>CONTROL OPERATIVO</small></span></a></div>
+          <nav class="workspace-nav" aria-label="Navegación administrativa">
+            <p class="workspace-nav-label">OPERACIÓN</p>
+            <a href="resumen.html" data-admin-target="dashboard-panel" data-admin-shortcut="dashboard"><span class="workspace-nav-index">01</span><span>Resumen</span></a>
+            <a href="cotizaciones.html" data-admin-target="quotes-panel" data-admin-shortcut="quotes"><span class="workspace-nav-index">02</span><span>Cotizaciones</span></a>
+            <a href="clientes.html" data-admin-target="clients-panel" data-admin-shortcut="clients"><span class="workspace-nav-index">03</span><span>Clientes</span></a>
+            <a href="inventario.html" data-admin-target="inventory-panel" data-admin-shortcut="inventory"><span class="workspace-nav-index">04</span><span>Inventario</span></a>
+            <a href="facturas.html" data-admin-target="invoices-panel" data-admin-shortcut="invoices"><span class="workspace-nav-index">05</span><span>Facturas</span><small>Próximamente</small></a>
+            <p class="workspace-nav-label">CUENTA</p>
+            <a href="usuarios.html" data-admin-target="users-panel" data-admin-shortcut="users"><span class="workspace-nav-index">06</span><span>Usuarios</span></a>
+            <a href="perfil.html" data-admin-target="profile-panel" data-admin-shortcut="profile"><span class="workspace-nav-index">07</span><span>Mi perfil</span></a>
+          </nav>
+          <div class="workspace-sidebar-footer"><div class="workspace-mini-user"><span class="workspace-avatar workspace-avatar-small" data-user-initials>DG</span><span><strong data-user-name>Usuario AJJITEC</strong><small data-user-role>Acceso pendiente</small></span></div><button class="workspace-logout" type="button" data-logout-button>Cerrar sesión <span>↗</span></button></div>
+        </aside>
+        <div class="workspace-content">
+          <header class="workspace-topbar" data-admin-content hidden><div class="workspace-topbar-title"><span>AJJITEC / WORKSPACE</span><strong>Panel de operaciones</strong></div><div class="workspace-topbar-actions"><span class="workspace-live"><i></i>EN VIVO</span><a class="workspace-profile-trigger" href="perfil.html" aria-label="Abrir mi perfil"><span class="workspace-avatar workspace-avatar-tiny" data-user-initials>DG</span><span><strong data-user-name>Usuario AJJITEC</strong><small data-user-role>Acceso pendiente</small></span><b>⌄</b></a></div></header>
+          <section class="workspace-profile-banner" data-admin-content hidden><div class="workspace-avatar workspace-avatar-large" data-user-initials>DG</div><div class="workspace-profile-copy"><span class="workspace-kicker">PERFIL ACTIVO</span><h1 data-user-name>Usuario AJJITEC</h1><p><span data-user-role>Acceso pendiente</span><span> / </span><span data-user-company>Empresa no indicada</span></p><small data-user-email>correo@ajjitec.com</small></div><div class="workspace-profile-actions"><a class="button button-ghost workspace-edit-profile" href="perfil.html">Editar perfil <span>↗</span></a><a class="button button-primary" href="perfil.html?focus=password">Contraseña <span>↗</span></a></div></section>
+          <section class="auth-card account-card" data-access-pending hidden><p class="eyebrow">ACCESO / PENDIENTE</p><h2>Estamos revisando tu solicitud.</h2><p>Tu cuenta ya está creada, pero un administrador debe asignarte permisos antes de habilitar los módulos administrativos.</p></section>
+          <section class="admin-shortcuts" aria-label="Módulos administrativos" data-admin-content hidden>
+            <a class="admin-shortcut" href="resumen.html" data-admin-target="dashboard-panel" data-admin-shortcut="dashboard"><span>01 / RESUMEN</span><strong>Indicadores operativos</strong><small>Vista en tiempo real</small><b>↘</b></a>
+            <a class="admin-shortcut" href="inventario.html" data-admin-target="inventory-panel" data-admin-shortcut="inventory"><span>02 / CATÁLOGO</span><strong>Productos e inventario</strong><small>Gestiona existencias y fotos</small><b>↘</b></a>
+            <a class="admin-shortcut" href="clientes.html" data-admin-target="clients-panel" data-admin-shortcut="clients"><span>03 / CLIENTES</span><strong>Directorio comercial</strong><small>Ordena tus relaciones</small><b>↘</b></a>
+            <a class="admin-shortcut" href="usuarios.html" data-admin-target="users-panel" data-admin-shortcut="users"><span>04 / USUARIOS</span><strong>Accesos y roles</strong><small>Administra permisos</small><b>↘</b></a>
+            <a class="admin-shortcut" href="cotizaciones.html" data-admin-target="quotes-panel" data-admin-shortcut="quotes"><span>05 / COTIZACIONES</span><strong>Generador comercial</strong><small>Prepara propuestas</small><b>↘</b></a>
+          </section>
+          <section class="admin-module" id="dashboard-panel" data-admin-content data-admin-module="dashboard" hidden>
+            <div class="admin-module-heading"><div><p class="eyebrow">RESUMEN / 01</p><h2>Lo importante, en una vista.</h2></div><p>Indicadores calculados desde los datos actuales de AJJITEC. Se actualizan al volver a consultar y con los siguientes eventos en tiempo real.</p></div>
+            <p class="admin-status" data-dashboard-status aria-live="polite"></p>
+            <div class="dashboard-kpis">
+              <article><span>PRODUCTOS ACTIVOS</span><strong data-metric="products_active">—</strong><small>del catálogo publicado</small></article>
+              <article><span>UNIDADES EN STOCK</span><strong data-metric="inventory_units">—</strong><small>en productos activos</small></article>
+              <article><span>CLIENTES</span><strong data-metric="clients_total">—</strong><small><span data-metric="clients_leads">—</span> prospectos</small></article>
+              <article><span>PIPELINE</span><strong data-metric="pipeline_total">—</strong><small><span data-metric="quotes_total">—</span> cotizaciones</small></article>
+              <article><span>APROBADAS</span><strong data-metric="approved_total">—</strong><small><span data-metric="quotes_approved">—</span> cotizaciones aprobadas</small></article>
+            </div>
+            <div class="dashboard-grid">
+              <section class="dashboard-card"><div class="dashboard-card-heading"><div><p class="eyebrow">COTIZACIONES</p><h3>Estado comercial.</h3></div><span>Distribución actual</span></div><div class="dashboard-status-list" data-dashboard-status-list></div><p class="dashboard-empty" data-dashboard-status-empty>Sin cotizaciones todavía.</p></section>
+              <section class="dashboard-card"><div class="dashboard-card-heading"><div><p class="eyebrow">INVENTARIO</p><h3>Stock por revisar.</h3></div><span>5 unidades o menos</span></div><div class="dashboard-stock-list" data-dashboard-stock-list></div><p class="dashboard-empty" data-dashboard-stock-empty>Sin alertas de stock.</p></section>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-client.js?v=portal-routes-1"></script><script src="auth.js?v=portal-routes-1"></script><script src="admin.js?v=portal-routes-1"></script>
+  </body>
+</html>

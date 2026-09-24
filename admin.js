@@ -113,6 +113,9 @@
   const setupPage = ({ profile, user }) => {
     if (!profile || !['admin', 'sales', 'inventory', 'viewer'].includes(profile.role)) return;
 
+    const accountSection = page.dataset.accountSection || 'dashboard';
+    const isSection = (...sections) => sections.includes(accountSection);
+
     const permissions = {
       dashboard: ['admin', 'sales', 'inventory', 'viewer'].includes(profile.role),
       inventory: ['admin', 'inventory', 'viewer'].includes(profile.role),
@@ -130,7 +133,10 @@
 
     const setWorkspaceActive = (target) => {
       document.querySelectorAll('.workspace-nav a[data-admin-target]').forEach((link) => {
-        link.classList.toggle('is-active', link.dataset.adminTarget === target);
+        const isActive = link.dataset.adminTarget === target;
+        link.classList.toggle('is-active', isActive);
+        if (isActive) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
       });
     };
     document.querySelector('[data-show-password]')?.addEventListener('click', () => {
@@ -147,7 +153,7 @@
       setWorkspaceActive(button.dataset.adminTarget);
       document.querySelector('#' + button.dataset.adminTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }));
-    setWorkspaceActive('dashboard-panel');
+    setWorkspaceActive(accountSection + '-panel');
 
     const inventoryForm = document.querySelector('#inventory-form');
     const clientsForm = document.querySelector('#clients-form');
@@ -582,13 +588,18 @@
       element.dataset.state = error ? 'error' : 'success';
     };
     const refreshFromRealtime = (table) => {
-      const tasks = [loadDashboard()];
+      const tasks = [];
+      if (isSection('dashboard')) tasks.push(loadDashboard());
       if (['products', 'product_images', 'product_categories'].includes(table)) {
-        tasks.push(loadInventory(), loadQuoteProducts(), loadCategories());
+        if (isSection('inventory')) tasks.push(loadInventory(), loadCategories());
+        if (isSection('quotes')) tasks.push(loadQuoteProducts());
       }
-      if (table === 'clients') tasks.push(loadClients(), loadQuoteClients());
-      if (['quotes', 'quote_items'].includes(table)) tasks.push(loadQuotes());
-      if (table === 'profiles') tasks.push(loadUsers());
+      if (table === 'clients') {
+        if (isSection('clients')) tasks.push(loadClients());
+        if (isSection('quotes')) tasks.push(loadQuoteClients());
+      }
+      if (['quotes', 'quote_items'].includes(table) && isSection('quotes')) tasks.push(loadQuotes());
+      if (table === 'profiles' && isSection('users')) tasks.push(loadUsers());
       Promise.all(tasks);
     };
     const connectRealtime = () => {
@@ -1179,7 +1190,13 @@
       validUntil.value = defaultDate.toISOString().slice(0, 10);
     }
     updateQuoteSummary();
-    Promise.all([loadDashboard(), loadCategories(), loadInventory(), loadClients(), loadUsers(), loadQuoteProducts(), loadQuoteClients(), loadQuotes()]);
+    const initialTasks = [];
+    if (isSection('dashboard')) initialTasks.push(loadDashboard());
+    if (isSection('inventory')) initialTasks.push(loadCategories(), loadInventory());
+    if (isSection('clients')) initialTasks.push(loadClients());
+    if (isSection('users')) initialTasks.push(loadUsers());
+    if (isSection('quotes')) initialTasks.push(loadQuoteProducts(), loadQuoteClients(), loadQuotes());
+    Promise.all(initialTasks);
     connectRealtime();
   };
 
