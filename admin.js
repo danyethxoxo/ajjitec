@@ -139,6 +139,27 @@
         else link.removeAttribute('aria-current');
       });
     };
+    const routeLoader = document.querySelector('[data-route-loader]');
+    const showRouteLoader = () => routeLoader?.classList.add('is-visible');
+    document.querySelectorAll('.workspace-nav a[href]').forEach((link) => link.addEventListener('click', (event) => {
+      if (
+        event.defaultPrevented
+        || (typeof event.button === 'number' && event.button !== 0)
+        || event.metaKey
+        || event.ctrlKey
+        || event.shiftKey
+        || event.altKey
+      ) return;
+
+      const target = new URL(link.href, window.location.href);
+      const current = new URL(window.location.href);
+      if (target.origin !== current.origin) return;
+      if (target.pathname === current.pathname && target.search === current.search && target.hash === current.hash) return;
+
+      event.preventDefault();
+      showRouteLoader();
+      window.setTimeout(() => window.location.assign(target.href), 90);
+    }));
     document.querySelector('[data-show-password]')?.addEventListener('click', () => {
       setWorkspaceActive('profile-panel');
       const panel = document.querySelector('[data-password-panel]');
