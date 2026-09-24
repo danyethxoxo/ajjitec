@@ -492,7 +492,11 @@ body:has([data-account-page]) .workspace-sidebar {
 }
 
 body:has([data-account-page]) .workspace-content {
-  padding: 0 clamp(20px, 3vw, 48px) 64px !important;
+  padding: 24px clamp(20px, 3vw, 48px) 64px !important;
+}
+
+body:has([data-account-page]) .workspace-brand a {
+  gap: 0 !important;
 }
 
 body:has([data-account-page]) .workspace-profile-trigger,
@@ -506,6 +510,11 @@ body:has([data-account-page]) .admin-shortcut {
     padding: 0 !important;
   }
 
+  body:has([data-account-page]) .workspace-topbar {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+  }
+
   body:has([data-account-page]) .workspace-sidebar {
     height: auto !important;
     min-height: 0 !important;
@@ -513,12 +522,12 @@ body:has([data-account-page]) .admin-shortcut {
   }
 
   body:has([data-account-page]) .workspace-content {
-    padding: 0 20px 48px !important;
+    padding: 18px 20px 48px !important;
   }
 }
 
 @media (max-width: 560px) {
   body:has([data-account-page]) .workspace-content {
-    padding: 0 16px 40px !important;
+    padding: 16px 16px 40px !important;
   }
 }
