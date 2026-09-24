@@ -93,6 +93,7 @@
     if (pendingNotice) pendingNotice.hidden = hasAdminAccess;
 
     const moduleRoles = {
+      dashboard: ['admin', 'sales', 'inventory', 'viewer'],
       inventory: ['admin', 'inventory', 'viewer'],
       clients: ['admin', 'sales', 'viewer'],
       users: ['admin'],

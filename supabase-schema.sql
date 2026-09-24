@@ -876,3 +876,40 @@ create policy "product_images_storage_delete_staff"
     bucket_id = 'product-images'
     and (select public.has_any_role(array['admin', 'inventory']))
   );
+
+-- Vistas operativas para dashboards. security_invoker hace que respeten el RLS
+-- de las tablas subyacentes para cada usuario autenticado.
+create or replace view public.dashboard_metrics
+with (security_invoker = true)
+as
+select
+  (select count(*)::integer from public.products) as products_total,
+  (select count(*)::integer from public.products where active = true) as products_active,
+  (select coalesce(sum(stock), 0)::bigint from public.products where active = true) as inventory_units,
+  (select count(*)::integer from public.clients) as clients_total,
+  (select count(*)::integer from public.clients where status = 'lead') as clients_leads,
+  (select count(*)::integer from public.quotes) as quotes_total,
+  (select count(*)::integer from public.quotes where status = 'approved') as quotes_approved,
+  (select coalesce(sum(total), 0)::numeric(14,2) from public.quotes where status in ('sent', 'approved')) as pipeline_total,
+  (select coalesce(sum(total), 0)::numeric(14,2) from public.quotes where status = 'approved') as approved_total;
+
+create or replace view public.dashboard_quote_status
+with (security_invoker = true)
+as
+select
+  status,
+  count(*)::integer as total_count,
+  coalesce(sum(total), 0)::numeric(14,2) as total_amount
+from public.quotes
+group by status;
+
+create or replace view public.dashboard_low_stock
+with (security_invoker = true)
+as
+select id, sku, name, stock, active
+from public.products
+where active = true and stock <= 5
+order by stock asc, name asc;
+
+revoke all on table public.dashboard_metrics, public.dashboard_quote_status, public.dashboard_low_stock from anon, authenticated;
+grant select on table public.dashboard_metrics, public.dashboard_quote_status, public.dashboard_low_stock to authenticated;

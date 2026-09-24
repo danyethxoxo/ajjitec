@@ -99,6 +99,7 @@
     if (!profile || !['admin', 'sales', 'inventory', 'viewer'].includes(profile.role)) return;
 
     const permissions = {
+      dashboard: ['admin', 'sales', 'inventory', 'viewer'].includes(profile.role),
       inventory: ['admin', 'inventory', 'viewer'].includes(profile.role),
       inventoryWrite: ['admin', 'inventory'].includes(profile.role),
       clients: ['admin', 'sales', 'viewer'].includes(profile.role),
@@ -214,6 +215,43 @@
       document.querySelector('[data-quotes-count]')?.replaceChildren(items.length + ' ' + (items.length === 1 ? 'cotización' : 'cotizaciones'));
     };
 
+    const renderDashboard = ({ metrics, quoteStatuses: statuses, lowStock }) => {
+      const metricValues = {
+        products_active: Number(metrics?.products_active || 0),
+        inventory_units: Number(metrics?.inventory_units || 0),
+        clients_total: Number(metrics?.clients_total || 0),
+        clients_leads: Number(metrics?.clients_leads || 0),
+        quotes_total: Number(metrics?.quotes_total || 0),
+        quotes_approved: Number(metrics?.quotes_approved || 0),
+        pipeline_total: money(metrics?.pipeline_total || 0),
+        approved_total: money(metrics?.approved_total || 0)
+      };
+      Object.entries(metricValues).forEach(([key, value]) => {
+        document.querySelector('[data-metric="' + key + '"]')?.replaceChildren(String(value));
+      });
+
+      const statusList = document.querySelector('[data-dashboard-status-list]');
+      const statusEmpty = document.querySelector('[data-dashboard-status-empty]');
+      const statusMap = new Map((statuses || []).map((item) => [item.status, item]));
+      const maxCount = Math.max(...(statuses || []).map((item) => Number(item.total_count || 0)), 1);
+      if (statusList) {
+        statusList.innerHTML = quoteStatuses.map((status) => {
+          const item = statusMap.get(status.value) || { total_count: 0, total_amount: 0 };
+          const countValue = Number(item.total_count || 0);
+          const width = Math.min(100, Math.round((countValue / maxCount) * 100));
+          return '<div class="dashboard-status-row"><div><span>' + status.label + '</span><strong>' + countValue + '</strong></div><div class="dashboard-bar"><i style="width:' + width + '%"></i></div><small>' + money(item.total_amount || 0) + '</small></div>';
+        }).join('');
+      }
+      if (statusEmpty) statusEmpty.hidden = Boolean(statuses?.length);
+
+      const stockList = document.querySelector('[data-dashboard-stock-list]');
+      const stockEmpty = document.querySelector('[data-dashboard-stock-empty]');
+      if (stockList) {
+        stockList.innerHTML = (lowStock || []).map((item) => '<div class="dashboard-stock-row"><div><strong>' + escapeHtml(item.name) + '</strong><small>' + escapeHtml(item.sku) + '</small></div><b>' + Number(item.stock || 0) + '</b></div>').join('');
+      }
+      if (stockEmpty) stockEmpty.hidden = Boolean(lowStock?.length);
+    };
+
     const loadCategories = async () => {
       if (!permissions.inventory) return;
       const selector = document.querySelector('[data-product-category]');
@@ -293,6 +331,22 @@
         .order('created_at', { ascending: false });
       if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
       renderQuotes(data || []);
+    };
+
+    const loadDashboard = async () => {
+      if (!permissions.dashboard) return;
+      const [metricsResult, statusResult, stockResult] = await Promise.all([
+        client.from('dashboard_metrics').select('*').single(),
+        client.from('dashboard_quote_status').select('status,total_count,total_amount').order('total_amount', { ascending: false }),
+        client.from('dashboard_low_stock').select('id,sku,name,stock,active').limit(6)
+      ]);
+      const firstError = metricsResult.error || statusResult.error || stockResult.error;
+      if (firstError) return setMessage('[data-dashboard-status]', databaseMessage(firstError), true);
+      renderDashboard({
+        metrics: metricsResult.data,
+        quoteStatuses: statusResult.data || [],
+        lowStock: stockResult.data || []
+      });
     };
 
     const removeUploadedFiles = async (paths) => {
@@ -390,6 +444,7 @@
         resetQuoteBuilder();
         setMessage('[data-quotes-status]', 'Cotización COT-' + String(quote.quote_number).padStart(6, '0') + ' guardada correctamente.');
         await loadQuotes();
+        await loadDashboard();
       } catch (error) {
         setMessage('[data-quotes-status]', databaseMessage(error), true);
       } finally {
@@ -443,6 +498,7 @@
             await removeUploadedFiles(uploadedPaths);
             form.reset();
             await loadInventory();
+            await loadDashboard();
             return setMessage('[data-inventory-status]', 'Producto guardado, pero ' + storageMessage(uploadError), true);
           }
           uploadedPaths.push(storagePath);
@@ -460,6 +516,7 @@
             await removeUploadedFiles(uploadedPaths);
             form.reset();
             await loadInventory();
+            await loadDashboard();
             return setMessage('[data-inventory-status]', 'Producto guardado, pero no pudimos registrar sus fotografías.', true);
           }
         }
@@ -467,6 +524,7 @@
         form.reset();
         setMessage('[data-inventory-status]', 'Producto agregado correctamente.' + (uploadedPaths.length ? ' Fotografías cargadas.' : ''));
         await loadInventory();
+        await loadDashboard();
       } catch (error) {
         setMessage('[data-inventory-status]', databaseMessage(error), true);
       } finally {
@@ -495,7 +553,8 @@
       if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
       form.reset();
       setMessage('[data-clients-status]', 'Cliente agregado correctamente.');
-      loadClients();
+      await loadClients();
+      await loadDashboard();
     });
 
     page.addEventListener('click', async (event) => {
@@ -532,7 +591,8 @@
         saveClient.disabled = false;
         if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
         setMessage('[data-clients-status]', 'Estado del cliente actualizado.');
-        loadClients();
+        await loadClients();
+        await loadDashboard();
         return;
       }
 
@@ -584,7 +644,8 @@
         saveQuote.disabled = false;
         if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
         setMessage('[data-quotes-status]', 'Estado de la cotización actualizado.');
-        loadQuotes();
+        await loadQuotes();
+        await loadDashboard();
         return;
       }
 
@@ -596,7 +657,8 @@
         deleteQuote.disabled = false;
         if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
         setMessage('[data-quotes-status]', 'Cotización eliminada correctamente.');
-        loadQuotes();
+        await loadQuotes();
+        await loadDashboard();
         return;
       }
 
@@ -621,6 +683,7 @@
         const paths = (images || []).map((image) => image.storage_path).filter(Boolean);
         const storageError = await removeUploadedFiles(paths);
         await loadInventory();
+        await loadDashboard();
         deleteProduct.disabled = false;
         if (storageError) return setMessage('[data-inventory-status]', 'Producto eliminado. Algunas fotografías deberán limpiarse desde Storage.', true);
         setMessage('[data-inventory-status]', 'Producto eliminado correctamente.');
@@ -633,7 +696,8 @@
         if (!window.confirm('¿Eliminar este cliente?')) return;
         const { error } = await client.from('clients').delete().eq('id', clientId);
         if (error) return setMessage('[data-clients-status]', databaseMessage(error), true);
-        loadClients();
+        await loadClients();
+        await loadDashboard();
       }
     });
 
@@ -644,7 +708,7 @@
       validUntil.value = defaultDate.toISOString().slice(0, 10);
     }
     updateQuoteSummary();
-    Promise.all([loadCategories(), loadInventory(), loadClients(), loadUsers(), loadQuoteProducts(), loadQuoteClients(), loadQuotes()]);
+    Promise.all([loadDashboard(), loadCategories(), loadInventory(), loadClients(), loadUsers(), loadQuoteProducts(), loadQuoteClients(), loadQuotes()]);
   };
 
   if (window.ajjitecAuthReady) window.ajjitecAuthReady.then(setupPage);
