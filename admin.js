@@ -112,6 +112,7 @@
     const quoteProductMap = new Map();
     const inventoryProductMap = new Map();
     const clientMap = new Map();
+    const quoteMap = new Map();
 
     document.querySelector('[data-show-password]')?.addEventListener('click', () => {
       const panel = document.querySelector('[data-password-panel]');
@@ -172,6 +173,25 @@
       editingClientId = null;
       clientsForm?.reset();
       setClientFormMode();
+    };
+    let editingQuoteId = null;
+    const quoteSubmit = quoteForm?.querySelector('button[type="submit"]');
+    let cancelQuoteEdit = quoteForm?.querySelector('[data-cancel-quote-edit]');
+    if (quoteForm && quoteSubmit && !cancelQuoteEdit) {
+      cancelQuoteEdit = document.createElement('button');
+      cancelQuoteEdit.type = 'button';
+      cancelQuoteEdit.className = 'admin-user-save admin-form-wide quote-cancel-edit';
+      cancelQuoteEdit.dataset.cancelQuoteEdit = '';
+      cancelQuoteEdit.textContent = 'Cancelar edición';
+      cancelQuoteEdit.hidden = true;
+      quoteForm.insertBefore(cancelQuoteEdit, quoteSubmit);
+    }
+    const setQuoteFormMode = () => {
+      if (!quoteSubmit) return;
+      quoteSubmit.innerHTML = editingQuoteId
+        ? 'Guardar cambios <span>↗</span>'
+        : 'Guardar cotización <span>↗</span>';
+      if (cancelQuoteEdit) cancelQuoteEdit.hidden = !editingQuoteId;
     };
     if (inventoryForm && !permissions.inventoryWrite) {
       inventoryForm.hidden = true;
@@ -255,6 +275,8 @@
       const body = document.querySelector('[data-quotes-body]');
       const empty = document.querySelector('[data-quotes-empty]');
       if (!body || !empty) return;
+      quoteMap.clear();
+      items.forEach((item) => quoteMap.set(item.id, item));
       body.innerHTML = items.map((item) => {
         const clientRelation = item.clients;
         const company = clientRelation?.company || clientRelation?.[0]?.company || 'Cliente sin asignar';
@@ -267,7 +289,10 @@
         const deleteButton = permissions.quotesWrite && item.status === 'draft'
           ? '<button class="admin-delete" type="button" data-delete-quote="' + item.id + '" aria-label="Eliminar cotización">Eliminar</button>'
           : '';
-        const viewButton = '<a class="admin-user-save quote-link" href="cotizacion.html?id=' + encodeURIComponent(item.id) + '" target="_blank" rel="noreferrer">Ver</a>';
+        const editButton = permissions.quotesWrite && item.status === 'draft'
+          ? '<button class="admin-user-save" type="button" data-edit-quote="' + item.id + '">Editar</button>'
+          : '';
+        const viewButton = editButton + '<a class="admin-user-save quote-link" href="cotizacion.html?id=' + encodeURIComponent(item.id) + '" target="_blank" rel="noreferrer">Ver</a>';
         return '<tr data-quote-row="' + item.id + '"><td><code class="admin-code">COT-' + String(item.quote_number).padStart(6, '0') + '</code><small class="admin-user-meta">' + itemCount + ' ' + (itemCount === 1 ? 'partida' : 'partidas') + '</small></td><td><strong>' + escapeHtml(company) + '</strong></td><td><select class="admin-user-control" data-quote-status aria-label="Estado de cotización"' + disabled + '>' + options + '</select></td><td>' + escapeHtml(formatDate(item.valid_until, 'Sin límite')) + '</td><td><strong>' + money(item.total, item.currency) + '</strong></td><td>' + escapeHtml(formatDate(item.created_at)) + '</td><td>' + viewButton + saveButton + deleteButton + '</td></tr>';
       }).join('');
       empty.hidden = items.length > 0;
@@ -386,7 +411,7 @@
     const loadQuotes = async () => {
       if (!permissions.quotes) return;
       const { data, error } = await client.from('quotes')
-        .select('id,quote_number,status,currency,valid_until,subtotal,tax,total,created_at,updated_at,clients(company,contact_name),quote_items(id)')
+        .select('id,quote_number,client_id,status,currency,valid_until,notes,tax_rate,subtotal,tax,total,created_at,updated_at,clients(company,contact_name),quote_items(id,product_id,sku,description,quantity,unit_price,discount_percent,sort_order)')
         .order('created_at', { ascending: false });
       if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
       renderQuotes(data || []);
@@ -491,8 +516,35 @@
       if (!quoteForm) return;
       const rows = [...quoteForm.querySelectorAll('[data-quote-item]')];
       rows.slice(1).forEach((row) => row.remove());
+      rows.forEach((row) => {
+        delete row.dataset.quoteItemId;
+        delete row.dataset.quoteSku;
+      });
+      editingQuoteId = null;
       quoteForm.reset();
+      setQuoteFormMode();
       updateQuoteSummary();
+    };
+
+    const fillQuoteItemRow = (row, item) => {
+      if (!row || !item) return;
+      delete row.dataset.quoteItemId;
+      delete row.dataset.quoteSku;
+      const productControl = row.querySelector('[data-quote-product]');
+      const productId = item.product_id || '';
+      if (productControl && productId && ![...productControl.options].some((option) => option.value === productId)) {
+        const option = document.createElement('option');
+        option.value = productId;
+        option.textContent = [item.sku, item.description].filter(Boolean).join(' · ') || 'Producto guardado';
+        productControl.append(option);
+      }
+      if (productControl) productControl.value = productId;
+      row.querySelector('[data-quote-description]').value = item.description || '';
+      row.querySelector('[data-quote-quantity]').value = item.quantity ?? 1;
+      row.querySelector('[data-quote-price]').value = item.unit_price ?? 0;
+      row.querySelector('[data-quote-discount]').value = item.discount_percent ?? 0;
+      if (item.id) row.dataset.quoteItemId = item.id;
+      if (item.sku) row.dataset.quoteSku = item.sku;
     };
 
     quoteForm?.addEventListener('input', updateQuoteSummary);
@@ -501,6 +553,7 @@
       if (productControl) {
         const row = productControl.closest('[data-quote-item]');
         const product = quoteProductMap.get(productControl.value);
+        if (row) row.dataset.quoteSku = product?.sku || '';
         if (product && row) {
           const description = row.querySelector('[data-quote-description]');
           const price = row.querySelector('[data-quote-price]');
@@ -523,7 +576,7 @@
         const product = productId ? quoteProductMap.get(productId) : null;
         return {
           product_id: productId,
-          sku: product?.sku || null,
+          sku: product?.sku || row.dataset.quoteSku || null,
           description: String(row.querySelector('[data-quote-description]')?.value || '').trim(),
           quantity: Number(row.querySelector('[data-quote-quantity]')?.value || 0),
           unit_price: Number(row.querySelector('[data-quote-price]')?.value || 0),
@@ -536,25 +589,56 @@
         return setMessage('[data-quotes-status]', 'Completa al menos una partida con cantidad, descripción y precio válidos.', true);
       }
 
+      const wasEditing = Boolean(editingQuoteId);
+      const existingQuote = wasEditing ? quoteMap.get(editingQuoteId) : null;
+      const existingItems = Array.isArray(existingQuote?.quote_items) ? existingQuote.quote_items : [];
       submit.disabled = true;
       setMessage('[data-quotes-status]', 'Guardando cotización…');
       try {
-        const { data: quote, error } = await client.from('quotes').insert({
+        const quotePayload = {
           client_id: values.get('client_id'),
           status: 'draft',
           currency: 'MXN',
           valid_until: values.get('valid_until') || null,
           notes: String(values.get('notes') || '').trim() || null,
           tax_rate: Number(values.get('tax_rate') || 0)
-        }).select('id,quote_number').single();
+        };
+        let quote;
+        let error;
+        if (wasEditing) {
+          const result = await client.from('quotes').update(quotePayload).eq('id', editingQuoteId).select('id,quote_number').single();
+          quote = result.data;
+          error = result.error;
+        } else {
+          const result = await client.from('quotes').insert(quotePayload).select('id,quote_number').single();
+          quote = result.data;
+          error = result.error;
+        }
         if (error) return setMessage('[data-quotes-status]', databaseMessage(error), true);
 
+        if (wasEditing) {
+          const { error: clearItemsError } = await client.from('quote_items').delete().eq('quote_id', quote.id);
+          if (clearItemsError) return setMessage('[data-quotes-status]', databaseMessage(clearItemsError), true);
+        }
         const { error: itemsError } = await client.from('quote_items').insert(items.map((item) => ({
           ...item,
           quote_id: quote.id
         })));
         if (itemsError) {
-          await client.from('quotes').delete().eq('id', quote.id);
+          if (!wasEditing) {
+            await client.from('quotes').delete().eq('id', quote.id);
+          } else if (existingItems.length) {
+            await client.from('quote_items').insert(existingItems.map(({ product_id, sku, description, quantity, unit_price, discount_percent, sort_order }) => ({
+              quote_id: quote.id,
+              product_id,
+              sku,
+              description,
+              quantity,
+              unit_price,
+              discount_percent,
+              sort_order
+            })));
+          }
           return setMessage('[data-quotes-status]', databaseMessage(itemsError), true);
         }
 
@@ -707,6 +791,42 @@
     });
 
     page.addEventListener('click', async (event) => {
+      const cancelQuote = event.target.closest?.('[data-cancel-quote-edit]');
+      if (cancelQuote && permissions.quotesWrite) {
+        resetQuoteBuilder();
+        setMessage('[data-quotes-status]', 'Edición cancelada.');
+        return;
+      }
+
+      const editQuote = event.target.closest?.('[data-edit-quote]');
+      if (editQuote && permissions.quotesWrite && quoteForm) {
+        const item = quoteMap.get(editQuote.dataset.editQuote);
+        if (!item || item.status !== 'draft') return;
+        const lineItems = (Array.isArray(item.quote_items) ? item.quote_items : [])
+          .slice()
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+        resetQuoteBuilder();
+        const field = (name) => quoteForm.querySelector('[name="' + name + '"]');
+        field('client_id').value = item.client_id || '';
+        field('valid_until').value = item.valid_until || '';
+        field('tax_rate').value = item.tax_rate ?? 16;
+        field('notes').value = item.notes || '';
+        const itemsContainer = quoteForm.querySelector('[data-quote-items]');
+        const firstRow = quoteForm.querySelector('[data-quote-item]');
+        lineItems.forEach((lineItem, index) => {
+          const row = index === 0 ? firstRow : firstRow.cloneNode(true);
+          if (index > 0) itemsContainer.append(row);
+          fillQuoteItemRow(row, lineItem);
+        });
+        editingQuoteId = item.id;
+        setQuoteFormMode();
+        updateQuoteSummary();
+        setMessage('[data-quotes-status]', 'Editando COT-' + String(item.quote_number).padStart(6, '0') + '.');
+        quoteForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        field('client_id').focus();
+        return;
+      }
+
       const cancelClient = event.target.closest?.('[data-cancel-client-edit]');
       if (cancelClient && permissions.clientsWrite) {
         resetClientForm();
@@ -812,6 +932,8 @@
         const itemsContainer = quoteForm.querySelector('[data-quote-items]');
         if (!firstRow || !itemsContainer) return;
         const newRow = firstRow.cloneNode(true);
+        delete newRow.dataset.quoteItemId;
+        delete newRow.dataset.quoteSku;
         newRow.querySelector('[data-quote-product]').value = '';
         newRow.querySelector('[data-quote-description]').value = '';
         newRow.querySelector('[data-quote-quantity]').value = '1';
