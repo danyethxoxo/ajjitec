@@ -66,18 +66,31 @@ document.querySelector('.menu-toggle')?.addEventListener('click', () => {
   document.querySelector('.menu-toggle').setAttribute('aria-expanded', String(open));
 });
 
+let catalogRefreshPending = false;
+const refreshCatalog = async () => {
+  if (catalogRefreshPending) return;
+  const loadProducts = window.ajjitecCatalog?.loadProducts;
+  if (!loadProducts) return;
+  catalogRefreshPending = true;
+  try {
+    const remoteProducts = await loadProducts();
+    if (!Array.isArray(remoteProducts)) return;
+    products = remoteProducts;
+    renderLines();
+    updateCategories();
+    render();
+  } finally {
+    catalogRefreshPending = false;
+  }
+};
+
 const initializeCatalog = async () => {
   renderLines();
   updateCategories();
   render();
-  const loadProducts = window.ajjitecCatalog?.loadProducts;
-  if (!loadProducts) return;
-  const remoteProducts = await loadProducts();
-  if (!Array.isArray(remoteProducts)) return;
-  products = remoteProducts;
-  renderLines();
-  updateCategories();
-  render();
+  await refreshCatalog();
+  const unsubscribe = window.ajjitecCatalog?.subscribeToCatalog?.(refreshCatalog);
+  window.addEventListener('beforeunload', () => unsubscribe?.(), { once: true });
 };
 
 initializeCatalog();

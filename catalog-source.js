@@ -44,8 +44,38 @@
     return [...productsBySlug.values()];
   };
 
+  const subscribeToCatalog = (onChange) => {
+    if (!client || typeof onChange !== 'function') return () => {};
+    let channel = null;
+    let retry = null;
+    let active = true;
+    const connect = () => {
+      if (!active) return;
+      channel = client.channel('ajjitec-public-catalog');
+      ['product_categories', 'products', 'product_images'].forEach((table) => {
+        channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => onChange());
+      });
+      channel.subscribe((status) => {
+        if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status) && active && !retry) {
+          retry = setTimeout(() => {
+            retry = null;
+            if (channel) client.removeChannel(channel);
+            connect();
+          }, 5000);
+        }
+      });
+    };
+    connect();
+    return () => {
+      active = false;
+      if (retry) clearTimeout(retry);
+      if (channel) client.removeChannel(channel);
+    };
+  };
+
   window.ajjitecCatalog = {
     fallbackProducts,
-    loadProducts
+    loadProducts,
+    subscribeToCatalog
   };
 })();
