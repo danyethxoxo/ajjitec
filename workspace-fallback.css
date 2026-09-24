@@ -1,0 +1,7 @@
+/* Fallback visual para el panel autenticado si el navegador conserva el atributo hidden. */
+body:has([data-account-page][data-user-role="admin"]) .workspace-sidebar[hidden]{display:flex!important}
+body:has([data-account-page][data-user-role="admin"]) .workspace-topbar[hidden]{display:flex!important}
+body:has([data-account-page][data-user-role="admin"]) .workspace-profile-banner[hidden]{display:grid!important}
+body:has([data-account-page][data-user-role="admin"]) .admin-shortcuts[hidden]{display:grid!important}
+body:has([data-account-page][data-user-role="admin"]) .admin-module[data-admin-content][hidden]{display:block!important}
+body:has([data-account-page][data-user-role="admin"]) .workspace-nav a[data-admin-shortcut][hidden]{display:grid!important}
