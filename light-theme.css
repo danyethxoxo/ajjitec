@@ -14,6 +14,8 @@
   --primary-tint: #eaf3ff;
   --success: #238452;
   --danger: #b42318;
+  --workspace-motion-duration: 320ms;
+  --workspace-motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html {
@@ -464,6 +466,30 @@ body:has([data-account-page]) .quote-summary span {
 }
 
 /* Portal frame: the sidebar owns the full left edge; content owns its reading inset. */
+@keyframes ajjitec-workspace-enter {
+  from {
+    opacity: 0.01;
+    transform: translate3d(0, 10px, 0);
+    clip-path: inset(1.5% 0 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    clip-path: inset(0);
+  }
+}
+
+@keyframes ajjitec-workspace-enter-reduced {
+  from {
+    opacity: 0.01;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 body:has([data-account-page]) {
   margin: 0 !important;
   min-width: 0;
@@ -493,6 +519,11 @@ body:has([data-account-page]) .workspace-sidebar {
 
 body:has([data-account-page]) .workspace-content {
   padding: 24px clamp(20px, 3vw, 48px) 64px !important;
+}
+
+body:has([data-account-page][data-access-state="authorized"]) .workspace-content {
+  animation: ajjitec-workspace-enter var(--workspace-motion-duration) var(--workspace-motion-ease) both;
+  transform-origin: top center;
 }
 
 body:has([data-account-page]) .workspace-brand a {
@@ -538,5 +569,12 @@ body:has([data-account-page]) .admin-shortcut {
 @media (max-width: 560px) {
   body:has([data-account-page]) .workspace-content {
     padding: 16px 16px 40px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:has([data-account-page][data-access-state="authorized"]) .workspace-content {
+    animation: ajjitec-workspace-enter-reduced 140ms ease-out both;
+    transform: none;
   }
 }
